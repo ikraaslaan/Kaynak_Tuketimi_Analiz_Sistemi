@@ -1,0 +1,1 @@
+# Mahalle_Bazli_Enerji_ve_Kaynak_Tuketimi_Analiz_Sistemi
