@@ -80,23 +80,46 @@ function Electricity() {
         </div>
 
         {/* Chart Section */}
-        <div className="chart-container">
-          <h3 className="chart-title">Günlük Tüketim Paterni</h3>
+        <div className="chart-container" style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.05)', borderRadius: '1rem', background: '#ffffff', padding: 16 }}>
+          <h3 className="chart-title" style={{ fontWeight: 700, color: '#111827' }}>Günlük Tüketim Paterni</h3>
           <ResponsiveContainer width="100%" height={280}>
             <AreaChart data={electricityData}>
+              <defs>
+                <linearGradient id="colorElectricityArea" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.05} />
+                </linearGradient>
+                <linearGradient id="colorElectricityLine" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.9} />
+                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1} />
+                </linearGradient>
+              </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="time" stroke="#6b7280" fontSize={12} />
-              <YAxis stroke="#6b7280" fontSize={12} />
+              <XAxis dataKey="time" stroke="#6b7280" fontSize={12} tickMargin={8} />
+              <YAxis stroke="#6b7280" fontSize={12} tickMargin={8} />
               <Tooltip 
                 contentStyle={{
                   backgroundColor: 'white',
                   border: '1px solid #e5e7eb',
                   borderRadius: '6px',
-                  boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                  fontSize: '12px'
+                  boxShadow: '0 8px 20px rgba(0,0,0,0.08)',
+                  fontSize: '12px',
+                  color: '#111827',
+                  padding: '8px 10px'
                 }}
+                labelStyle={{ color: '#6b7280', marginBottom: 4 }}
               />
-              <Area type="monotone" dataKey="consumption" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} />
+              <Area 
+                type="monotone" 
+                dataKey="consumption" 
+                stroke="url(#colorElectricityLine)" 
+                strokeWidth={3}
+                fill="url(#colorElectricityArea)" 
+                isAnimationActive={true}
+                animationDuration={800}
+                dot={false}
+                activeDot={{ r: 5, stroke: '#3b82f6', strokeWidth: 2, fill: '#ffffff' }}
+              />
             </AreaChart>
           </ResponsiveContainer>
         </div>
