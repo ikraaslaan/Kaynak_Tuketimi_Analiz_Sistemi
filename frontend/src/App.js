@@ -5,7 +5,7 @@ import Elektrik from "./pages/Elektrik";
 import Su from "./pages/Su";
 import Dogalgaz from "./pages/Dogalgaz";
 import Yonetici from "./pages/Yonetici";
-import SubscriptionBox from "./components/SubscriptionBox";
+import EmailSubscription from "./components/EmailSubscription"; // ✅ reCAPTCHA'lı yeni bileşen
 import "./App.css";
 
 function App() {
@@ -15,7 +15,12 @@ function App() {
   const renderContent = () => {
     switch (activeTab) {
       case "home":
-        return <HomePage selectedNeighborhood={selectedNeighborhood} setSelectedNeighborhood={setSelectedNeighborhood} />;
+        return (
+          <HomePage
+            selectedNeighborhood={selectedNeighborhood}
+            setSelectedNeighborhood={setSelectedNeighborhood}
+          />
+        );
       case "elektrik":
         return <Elektrik selectedNeighborhood={selectedNeighborhood} />;
       case "su":
@@ -25,15 +30,24 @@ function App() {
       case "yonetici":
         return <Yonetici />;
       default:
-        return <HomePage selectedNeighborhood={selectedNeighborhood} setSelectedNeighborhood={setSelectedNeighborhood} />;
+        return (
+          <HomePage
+            selectedNeighborhood={selectedNeighborhood}
+            setSelectedNeighborhood={setSelectedNeighborhood}
+          />
+        );
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#f9fafb]">
+    <div className="min-h-screen bg-[#f9fafb] relative">
       <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
       {renderContent()}
-      <SubscriptionBox />
+
+      {/* ✅ reCAPTCHA ile güvenli e-posta kutusu */}
+      <div className="fixed bottom-4 right-4 z-50">
+        <EmailSubscription />
+      </div>
     </div>
   );
 }
