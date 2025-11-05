@@ -1,15 +1,16 @@
 import React, { useState } from "react";
-import { Menu, X } from "lucide-react"; // 🔹 Sadece kullanılan ikonlar kaldı
+import { Menu, X, Home, Zap, Droplets, Flame, Shield } from "lucide-react";
+import icon from "../images/icon.jpg"; // ✅ LOGO BURADA
 
 const Navbar = ({ activeTab, setActiveTab }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const menuItems = [
-    { id: "home", label: "Ana Sayfa", emoji: "🏠" },
-    { id: "elektrik", label: "Elektrik", emoji: "⚡" },
-    { id: "su", label: "Su", emoji: "💧" },
-    { id: "dogalgaz", label: "Doğalgaz", emoji: "🔥" },
-    { id: "yonetici", label: "Yönetici", emoji: "👤" },
+    { id: "home", label: "Anasayfa", Icon: Home },
+    { id: "elektrik", label: "Elektrik", Icon: Zap },
+    { id: "su", label: "Su", Icon: Droplets },
+    { id: "dogalgaz", label: "Doğalgaz", Icon: Flame },
+    { id: "yonetici", label: "Yönetici", Icon: Shield },
   ];
 
   const isActive = (id) => activeTab === id;
@@ -20,13 +21,18 @@ const Navbar = ({ activeTab, setActiveTab }) => {
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-white shadow-md border-b-2 border-gray-100">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-br from-pink-50/60 to-pink-100/60 backdrop-blur-md border-b border-pink-200/60 shadow-none">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          {/* Logo */}
+
+          {/* Logo + Başlık */}
           <div className="flex items-center">
-            <h1 className="text-lg sm:text-xl font-bold text-gray-900 flex items-center gap-2">
-              <span className="text-xl sm:text-2xl">⚡</span>
+            <img
+              src={icon}
+              alt="Logo"
+              className="h-9 w-auto mr-3 object-contain rounded-md select-none"
+            />
+            <h1 className="text-3xl font-semibold tracking-tight text-gray-800">
               <span className="hidden sm:inline">
                 Kentsel Tüketim Analizi Platformu
               </span>
@@ -35,20 +41,21 @@ const Navbar = ({ activeTab, setActiveTab }) => {
           </div>
 
           {/* Desktop Menü */}
-          <div className="hidden md:flex items-center space-x-1">
+          <div className="hidden md:flex items-center space-x-2">
             {menuItems.map((item) => {
               const active = isActive(item.id);
+              const Icon = item.Icon;
               return (
                 <button
                   key={item.id}
                   onClick={() => handleNavigation(item.id)}
-                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  className={`flex items-center space-x-2 px-5 py-2 rounded-2xl text-sm font-normal transition-all duration-200 ${
                     active
-                      ? "text-blue-600 border-b-2 border-blue-600"
-                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                      ? "text-green-600 bg-white/50"
+                      : "text-green-600 hover:bg-white/50"
                   }`}
                 >
-                  <span className="text-base">{item.emoji}</span>
+                  <Icon className="w-4 h-4" />
                   <span>{item.label}</span>
                 </button>
               );
@@ -57,34 +64,32 @@ const Navbar = ({ activeTab, setActiveTab }) => {
 
           {/* Mobil Menü Butonu */}
           <button
-            className="md:hidden text-gray-600 hover:text-gray-900"
+            className="md:hidden text-gray-700 hover:text-gray-900 transition-colors duration-200"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            aria-label="Menüyü Aç/Kapat"
           >
-            {isMobileMenuOpen ? (
-              <X className="w-6 h-6" />
-            ) : (
-              <Menu className="w-6 h-6" />
-            )}
+            {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
         </div>
 
         {/* Mobil Menü Dropdown */}
         {isMobileMenuOpen && (
-          <div className="md:hidden border-t border-gray-200 py-3 animate-fade-in">
+          <div className="md:hidden py-3 animate-fade-in bg-gradient-to-br from-pink-50 to-pink-100 backdrop-blur-md border-t border-pink-200">
             <div className="flex flex-col space-y-1">
               {menuItems.map((item) => {
                 const active = isActive(item.id);
+                const Icon = item.Icon;
                 return (
                   <button
                     key={item.id}
                     onClick={() => handleNavigation(item.id)}
-                    className={`flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    className={`flex items-center space-x-3 px-4 py-3 rounded-2xl text-sm font-normal transition-all duration-200 ${
                       active
-                        ? "text-blue-600 bg-blue-50"
-                        : "text-gray-600 hover:bg-gray-50"
+                        ? "text-green-600 bg-white/50"
+                        : "text-green-600 hover:bg-white/50"
                     }`}
                   >
-                    <span className="text-xl">{item.emoji}</span>
+                    <Icon className="w-5 h-5" />
                     <span>{item.label}</span>
                   </button>
                 );

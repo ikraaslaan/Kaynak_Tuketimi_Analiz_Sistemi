@@ -74,30 +74,32 @@ const EmailSubscription = () => {
   };
 
   return (
-    <div className="p-4 rounded-2xl shadow-md bg-white w-80">
+    <div className="p-6 rounded-3xl shadow-sm bg-white w-80 border border-emerald-100/50">
       {stage === "form" && (
-        <form onSubmit={handleSend} className="flex flex-col gap-2">
-          <h3 className="font-semibold text-gray-800 text-center">
+        <form onSubmit={handleSend} className="flex flex-col gap-4">
+          <h3 className="font-semibold text-gray-800 text-center text-lg">
             Subscribe to outage alerts
           </h3>
-          <div className="flex gap-2 items-center">
-            <label>
+          <div className="flex gap-4 items-center justify-center">
+            <label className="flex items-center gap-2 cursor-pointer text-gray-700 hover:text-emerald-700 transition-colors duration-200">
               <input
                 type="radio"
                 value="email"
                 checked={method === "email"}
                 onChange={() => setMethod("email")}
-              />{" "}
-              Email
+                className="w-4 h-4 text-emerald-600 focus:ring-emerald-500 focus:ring-2"
+              />
+              <span className="font-medium">Email</span>
             </label>
-            <label>
+            <label className="flex items-center gap-2 cursor-pointer text-gray-700 hover:text-emerald-700 transition-colors duration-200">
               <input
                 type="radio"
                 value="sms"
                 checked={method === "sms"}
                 onChange={() => setMethod("sms")}
-              />{" "}
-              SMS
+                className="w-4 h-4 text-emerald-600 focus:ring-emerald-500 focus:ring-2"
+              />
+              <span className="font-medium">SMS</span>
             </label>
           </div>
 
@@ -108,7 +110,7 @@ const EmailSubscription = () => {
               placeholder="Enter your email"
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="border rounded-lg px-3 py-2 text-sm"
+              className="border border-emerald-200 rounded-2xl px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-400 transition-all duration-300"
             />
           ) : (
             <input
@@ -117,14 +119,14 @@ const EmailSubscription = () => {
               placeholder="+905xxxxxxxxx"
               onChange={(e) => setPhone(e.target.value)}
               required
-              className="border rounded-lg px-3 py-2 text-sm"
+              className="border border-emerald-200 rounded-2xl px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-400 transition-all duration-300"
             />
           )}
 
           <button
             type="submit"
             disabled={loading}
-            className="bg-blue-600 text-white py-2 rounded-lg font-semibold"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-2xl font-semibold transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? "Sending..." : "Send Verification Code"}
           </button>
@@ -132,8 +134,8 @@ const EmailSubscription = () => {
       )}
 
       {stage === "code" && (
-        <form onSubmit={handleVerify} className="flex flex-col gap-2">
-          <h3 className="font-semibold text-gray-800 text-center">Enter code</h3>
+        <form onSubmit={handleVerify} className="flex flex-col gap-4">
+          <h3 className="font-semibold text-gray-800 text-center text-lg">Enter code</h3>
           <input
             type="text"
             value={code}
@@ -141,12 +143,12 @@ const EmailSubscription = () => {
             onChange={(e) => setCode(e.target.value)}
             required
             maxLength={6}
-            className="border rounded-lg px-3 py-2 text-sm text-center"
+            className="border border-emerald-200 rounded-2xl px-4 py-3 text-sm text-center text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-400 transition-all duration-300"
           />
           <button
             type="submit"
             disabled={loading}
-            className="bg-green-600 text-white py-2 rounded-lg font-semibold"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-2xl font-semibold transition-all duration-300 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? "Verifying..." : "Verify Code"}
           </button>
@@ -154,9 +156,11 @@ const EmailSubscription = () => {
       )}
 
       {stage === "done" && (
-        <p className="text-green-700 text-center font-semibold">
-          ✅ You are successfully subscribed!
-        </p>
+        <div className="text-center py-2">
+          <p className="text-emerald-700 text-center font-semibold text-lg">
+            ✅ You are successfully subscribed!
+          </p>
+        </div>
       )}
     </div>
   );

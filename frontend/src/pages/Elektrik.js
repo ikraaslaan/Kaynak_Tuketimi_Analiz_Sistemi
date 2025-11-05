@@ -121,7 +121,7 @@ const Elektrik = ({ selectedNeighborhood }) => {
   if (loading) {
     return (
       <div className="pt-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto pb-12">
-        <p className="text-gray-600">Veriler yükleniyor...</p>
+        <p className="text-gray-700">Veriler yükleniyor...</p>
       </div>
     );
   }
@@ -129,18 +129,18 @@ const Elektrik = ({ selectedNeighborhood }) => {
   return (
     <div className="pt-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto pb-12">
       <div className="animate-fade-in">
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-2">
-            <Zap className="w-6 h-6 text-blue-600" />
+        <div className="mb-10">
+          <h2 className="text-2xl font-bold text-gray-800 mb-3 flex items-center gap-3">
+            <Zap className="w-7 h-7 text-emerald-600" />
             Elektrik Tüketim Analizi
           </h2>
-          <p className="text-gray-600">Mahalle bazında haftalık elektrik tüketimi</p>
+          <p className="text-gray-700">Mahalle bazında haftalık elektrik tüketimi</p>
         </div>
 
-        <div className="bg-white rounded-2xl p-6 shadow-md border border-gray-100 mb-8" ref={searchRef}>
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Mahalle Ara</h3>
+        <div className="bg-white rounded-3xl p-8 shadow-sm border border-emerald-100/50 mb-10" ref={searchRef}>
+          <h3 className="text-lg font-semibold text-gray-800 mb-5">Mahalle Ara</h3>
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
               placeholder="Mahalle ara..."
@@ -148,22 +148,22 @@ const Elektrik = ({ selectedNeighborhood }) => {
               onChange={handleSearchChange}
               onFocus={() => setShowDropdown(true)}
               onKeyDown={handleKeyDown}
-              className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-14 pr-5 py-4 border border-emerald-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-400 transition-all duration-300 text-gray-800 placeholder:text-gray-400"
               aria-label="Mahalle ara"
             />
             {showDropdown && filtered.length > 0 && (
-              <div className="absolute z-10 w-full mt-2 bg-white rounded-xl shadow-lg border border-gray-200 max-h-64 overflow-y-auto">
+              <div className="absolute z-10 w-full mt-3 bg-white rounded-2xl shadow-md border border-emerald-100/50 max-h-64 overflow-y-auto">
                 {filtered.map((n, idx) => (
                   <button
                     key={n.name + idx}
                     onClick={() => handleSelect(n)}
-                    className={`w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors ${
-                      idx === highlightedIndex ? "bg-blue-50" : ""
-                    } ${idx === 0 ? "rounded-t-xl" : ""} ${
-                      idx === filtered.length - 1 ? "rounded-b-xl" : "border-b border-gray-100"
+                    className={`w-full text-left px-5 py-4 hover:bg-emerald-50 transition-all duration-200 ${
+                      idx === highlightedIndex ? "bg-emerald-50" : ""
+                    } ${idx === 0 ? "rounded-t-2xl" : ""} ${
+                      idx === filtered.length - 1 ? "rounded-b-2xl" : "border-b border-emerald-100/50"
                     }`}
                   >
-                    {n.name}
+                    <span className="font-medium text-gray-800">{n.name}</span>
                   </button>
                 ))}
               </div>
@@ -172,20 +172,20 @@ const Elektrik = ({ selectedNeighborhood }) => {
         </div>
 
         {!selected && (
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 text-gray-600">
+          <div className="bg-white rounded-3xl p-8 shadow-sm border border-emerald-100/50 text-gray-700">
             Lütfen bir mahalle seçiniz.
           </div>
         )}
 
         {selected && summary && (
-          <div className="grid grid-cols-1 gap-6 mb-8">
-            <div className="bg-white rounded-2xl p-6 shadow-md border border-gray-100">
+          <div className="grid grid-cols-1 gap-6 mb-10">
+            <div className="bg-white rounded-3xl p-8 shadow-sm border border-emerald-100/50 hover:shadow-md transition-shadow duration-300">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-sm text-gray-600">Ortalama Elektrik Tüketimi</h4>
-                  <p className="text-3xl font-bold text-gray-900">{summary.value}</p>
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">Ortalama Elektrik Tüketimi</h4>
+                  <p className="text-3xl font-bold text-gray-800">{summary.value}</p>
                 </div>
-                <div className={`text-sm font-medium ${summary.inc ? "text-green-600" : "text-red-600"}`}>
+                <div className={`text-sm font-semibold ${summary.inc ? "text-emerald-600" : "text-red-500"}`}>
                   {summary.change}
                 </div>
               </div>
@@ -194,28 +194,28 @@ const Elektrik = ({ selectedNeighborhood }) => {
         )}
 
         {selected && chartData.length > 0 && (
-          <div className="bg-white rounded-2xl p-6 shadow-md border border-gray-100 chart-container">
-            <h3 className="text-lg font-bold mb-4" style={{ color: '#111827' }}>Elektrik Tüketim Trendi (kWh)</h3>
+          <div className="bg-white rounded-3xl p-8 shadow-sm border border-emerald-100/50 chart-container">
+            <h3 className="text-lg font-bold mb-6 text-gray-800">Elektrik Tüketim Trendi (kWh)</h3>
             <div className="w-full h-[320px]">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData}>
                   <defs>
                     <linearGradient id="colorElectricity" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.9} />
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1} />
+                      <stop offset="5%" stopColor="#059669" stopOpacity={0.9} />
+                      <stop offset="95%" stopColor="#059669" stopOpacity={0.1} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#d1fae5" />
                   <XAxis dataKey="week" stroke="#6b7280" tickMargin={8} />
                   <YAxis stroke="#6b7280" tickMargin={8} />
                   <Tooltip 
-                    cursor={{ stroke: '#c7d2fe', strokeWidth: 1 }}
+                    cursor={{ stroke: '#a7f3d0', strokeWidth: 1 }}
                     contentStyle={{
                       backgroundColor: '#ffffff',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: 8,
-                      boxShadow: '0 8px 20px rgba(0,0,0,0.08)',
-                      padding: '8px 10px',
+                      border: '1px solid #d1fae5',
+                      borderRadius: 12,
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                      padding: '10px 12px',
                       color: '#111827',
                       fontSize: 12,
                     }}
@@ -227,7 +227,7 @@ const Elektrik = ({ selectedNeighborhood }) => {
                     stroke="url(#colorElectricity)" 
                     strokeWidth={3}
                     dot={false}
-                    activeDot={{ r: 5, stroke: '#3b82f6', strokeWidth: 2, fill: '#ffffff' }}
+                    activeDot={{ r: 5, stroke: '#059669', strokeWidth: 2, fill: '#ffffff' }}
                     isAnimationActive={true}
                     animationDuration={800}
                     name="Elektrik (kWh)"
@@ -239,7 +239,7 @@ const Elektrik = ({ selectedNeighborhood }) => {
         )}
       </div>
       <style>{`
-        .chart-container { box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-radius: 1rem; background: #ffffff; }
+        .chart-container { box-shadow: 0 1px 3px rgba(0,0,0,0.05); border-radius: 1.5rem; background: #ffffff; }
         .chart-container svg { background: transparent !important; }
       `}</style>
     </div>
