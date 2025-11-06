@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Menu, X, Home, Zap, Droplets, Flame, Shield } from "lucide-react";
-import icon from "../images/icon.jpg"; // ✅ LOGO BURADA
+import icon from "../images/icon.jpg"; // Logoyu buradan alıyoruz
 
 const Navbar = ({ activeTab, setActiveTab }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -21,27 +21,27 @@ const Navbar = ({ activeTab, setActiveTab }) => {
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-br from-pink-50/60 to-pink-100/60 backdrop-blur-md border-b border-pink-200/60 shadow-none">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-pink-50/60 backdrop-blur-lg border-b border-pink-200 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+        <div className="flex justify-between items-center h-20">
 
-          {/* Logo + Başlık */}
-          <div className="flex items-center">
+          {/* Logo ve Başlık: En sola sıfırlandı, logo ile başlık arasına ve sağa doğru ek boşluk */}
+          {/* logo ve başlık arasındaki boşluk için mr-3, sağa doğru ek boşluk için pr-8 */}
+          <div className="flex items-center pr-8 flex-shrink-0"> 
             <img
               src={icon}
-              alt="Logo"
-              className="h-9 w-auto mr-3 object-contain rounded-md select-none"
+              alt="Platform Logo"
+              className="h-9 w-auto object-contain rounded-lg select-none mr-3" 
             />
-            <h1 className="text-3xl font-semibold tracking-tight text-gray-800">
-              <span className="hidden sm:inline">
-                Kentsel Tüketim Analizi Platformu
-              </span>
-              <span className="sm:hidden">Kentsel Tüketim</span>
+            <h1 className="text-xl font-extrabold tracking-tight text-gray-800 sm:text-2xl lg:text-3xl whitespace-nowrap">
+              Kentsel <span className="text-emerald-600">Tüketim</span> Analizi Platformu
             </h1>
           </div>
 
-          {/* Desktop Menü */}
-          <div className="hidden md:flex items-center space-x-2">
+          {/* Desktop Menü: Sağa yaslandı, öğeler arası boşluk daha da açıldı ve soldan boşluk */}
+          {/* ml-auto menüyü sağa iter, space-x-8 öğeler arası daha fazla boşluk verir.
+              pl-8 ile menü bloğunun soldan içeri itilmesi sağlandı. */}
+          <div className="hidden md:flex items-center space-x-8 pl-8"> 
             {menuItems.map((item) => {
               const active = isActive(item.id);
               const Icon = item.Icon;
@@ -49,13 +49,13 @@ const Navbar = ({ activeTab, setActiveTab }) => {
                 <button
                   key={item.id}
                   onClick={() => handleNavigation(item.id)}
-                  className={`flex items-center space-x-2 px-5 py-2 rounded-2xl text-sm font-normal transition-all duration-200 ${
+                  className={`flex items-center space-x-2 px-5 py-2.5 rounded-full text-md font-medium transition-all duration-300 group ${
                     active
-                      ? "text-green-600 bg-white/50"
-                      : "text-green-600 hover:bg-white/50"
+                      ? "bg-emerald-500 text-white shadow-md"
+                      : "text-gray-700 hover:bg-emerald-50 hover:text-emerald-700"
                   }`}
                 >
-                  <Icon className="w-4 h-4" />
+                  <Icon className={`w-5 h-5 ${active ? "text-white" : "text-gray-500 group-hover:text-emerald-600"}`} />
                   <span>{item.label}</span>
                 </button>
               );
@@ -64,18 +64,18 @@ const Navbar = ({ activeTab, setActiveTab }) => {
 
           {/* Mobil Menü Butonu */}
           <button
-            className="md:hidden text-gray-700 hover:text-gray-900 transition-colors duration-200"
+            className="md:hidden text-gray-600 hover:text-gray-900 transition-colors duration-200"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             aria-label="Menüyü Aç/Kapat"
           >
-            {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            {isMobileMenuOpen ? <X className="w-7 h-7" /> : <Menu className="w-7 h-7" />}
           </button>
         </div>
 
         {/* Mobil Menü Dropdown */}
         {isMobileMenuOpen && (
-          <div className="md:hidden py-3 animate-fade-in bg-gradient-to-br from-pink-50 to-pink-100 backdrop-blur-md border-t border-pink-200">
-            <div className="flex flex-col space-y-1">
+          <div className="md:hidden py-4 animate-fade-in-down bg-pink-50/95 border-t border-pink-200 shadow-lg">
+            <div className="flex flex-col space-y-2 px-2">
               {menuItems.map((item) => {
                 const active = isActive(item.id);
                 const Icon = item.Icon;
@@ -83,13 +83,13 @@ const Navbar = ({ activeTab, setActiveTab }) => {
                   <button
                     key={item.id}
                     onClick={() => handleNavigation(item.id)}
-                    className={`flex items-center space-x-3 px-4 py-3 rounded-2xl text-sm font-normal transition-all duration-200 ${
+                    className={`flex items-center space-x-3 px-4 py-3 rounded-xl text-md font-medium transition-all duration-200 ${
                       active
-                        ? "text-green-600 bg-white/50"
-                        : "text-green-600 hover:bg-white/50"
+                        ? "bg-emerald-500 text-white shadow-sm"
+                        : "text-gray-700 hover:bg-emerald-50 hover:text-emerald-700"
                     }`}
                   >
-                    <Icon className="w-5 h-5" />
+                    <Icon className={`w-6 h-6 ${active ? "text-white" : "text-gray-500"}`} />
                     <span>{item.label}</span>
                   </button>
                 );
