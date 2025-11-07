@@ -110,6 +110,68 @@ PROFIL_PARK = {
     }
 }
 
+# config.py'ye eklenecek YENİ ŞABLON taslağı
+
+PROFIL_KAMPUS = {
+    'tip': 'kampus', # Yeni bir tip!
+    
+    'mevsimsel_carpani': {
+        # İklimsel (Hastane + Üniversite Isıtma/Soğutma)
+        'dogalgaz_kis': 8.0, 
+        'elektrik_kis': 1.6, 
+        'yaz_klima': 1.8, 
+        
+        # Akademik (Üniversite Yükü)
+        # 1.0 = Sadece Hastane + çok az Uni
+        # 1.5 = Hastane + Tam kapasite Uni
+        'akademik_carpan_donem': 1.5, # Okul açıkken
+        'akademik_carpan_tatil': 1.0  # Okul kapalıyken
+    },
+    
+    'gun_tipi_carpan': { 
+        # Bu tipi 'uretim_modelleri' içinde özel ele alacağız
+        'hici': 1.0, 
+        'hsonu': 1.0 
+    },
+
+    'saatlik_profiller': {
+        # Kampüsün 2 ana durumu olacak: Okul AÇIK ve Okul KAPALI
+        
+        # --- OKUL AÇIK (Akademik Dönem) ---
+        # Hafta içi: Hastane (base) + Üniversite (peak)
+        'elektrik_donem_hici_x': [0,   7,   8,   17,  18,  24],
+        'elektrik_donem_hici_y': [1.5, 1.8, 3.0, 3.0, 1.8, 1.5], # 08-17 arası dev pik (3.0)
+        # Hafta sonu: Sadece Hastane + Kütüphane vb. (düşük Uni)
+        'elektrik_donem_hsonu_x': [0, 24],
+        'elektrik_donem_hsonu_y': [1.6, 1.6], # Stabil 1.6
+        
+        # --- OKUL KAPALI (Yaz Tatili) ---
+        # Hafta içi: Sadece Hastane (yaz okulu yok sayıldı)
+        'elektrik_tatil_hici_x': [0, 24],
+        'elektrik_tatil_hici_y': [1.4, 1.4], # Stabil 1.4 (Pik yok)
+        # Hafta sonu: Sadece Hastane
+        'elektrik_tatil_hsonu_x': [0, 24],
+        'elektrik_tatil_hsonu_y': [1.4, 1.4], # Stabil 1.4
+        
+        # ... (Aynı mantık SU ve DOĞALGAZ için de kopyalanacak) ...
+        # ... (Özellikle doğalgazda yaz/kış ayrımı devam edecek) ...
+
+        # --- DOĞALGAZ ---
+        # Kış (Isıtma) - Değişiklik yok
+        'dogalgaz_kis_x':  [0, 24],
+        'dogalgaz_kis_y':  [1.0, 1.0], 
+        
+        # Yaz (Sıcak Su/Mutfak) - Hafta içi/sonu ayrımı eklendi
+        
+        # Yaz Hafta İçi (Poliklinikler AÇIK, tam kapasite mutfak)
+        'dogalgaz_yaz_hici_x':  [0,   6,   8,   12,  14,  18,  20,  24],
+        'dogalgaz_yaz_hici_y':  [0.8, 1.5, 1.7, 1.7, 1.4, 1.7, 1.5, 0.8], # Yüksek pikler (1.5)
+        
+        # Yaz Hafta Sonu (Poliklinikler KAPALI, sadece yatan hasta mutfağı)
+        'dogalgaz_yaz_hsonu_x': [0,   6,   8,   12,  14,  18,  20,  24],
+        'dogalgaz_yaz_hsonu_y': [0.8, 1.1, 1.3, 1.1, 1.0, 1.3, 1.1, 0.8]  # Daha düşük pikler (1.3)
+    }
+}
 
 # --- ANA MAHALLE LİSTESİ ---
 MAHALLE_PROFILLERI = {
@@ -132,17 +194,27 @@ MAHALLE_PROFILLERI = {
     },
     
     "Sanayi": {
-        'base_elektrik': 8000, # Base'i 8000'e geri çekelim, çarpanları artırdık
+        'base_elektrik': 8000, 
         'base_su': 100,
         'base_dogalgaz': 50,
         **PROFIL_SANAYI 
     },
     
-    # --- YENİ EKLENEN MAHALLE ---
     "Kültürpark": {
-        'base_elektrik': 1500,  # Düşük gündüz, yüksek gece (aydınlatma)
-        'base_su': 80,          # Base tüketim düşük (kışın)
-        'base_dogalgaz': 5,     # Neredeyse sıfır baz tüketim (sadece mutfak)
-        **PROFIL_PARK     # Yeni profilimizi buraya kopyalıyoruz
+        'base_elektrik': 1500,  
+        'base_su': 80,         
+        'base_dogalgaz': 5,    
+        **PROFIL_PARK 
+    },
+    
+    # --- YENİ EKLENEN MAHALLE: UNIVERSITE ---
+    "Universite": {
+        # Base değerler 7/24 çalışan HASTANE yükünü temsil eder.
+        'base_elektrik': 4000, 
+        'base_su': 300, 
+        'base_dogalgaz': 350,
+        
+        # Yeni Kampüs profilinin tüm özelliklerini miras al
+        **PROFIL_KAMPUS 
     }
 }
