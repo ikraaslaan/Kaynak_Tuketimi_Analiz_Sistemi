@@ -7,7 +7,7 @@ print("-" * 30)
 
 # --- AYARLAR ---
 CSV_DOSYASI = 'tuketim_verisi_tum_mahalleler_detayli.csv'
-ANALIZ_MAHALLE = 'Çaydaçıra' # Hangi mahalleyi görmek istiyorsunuz?
+ANALIZ_MAHALLE = 'Universite' # Hangi mahalleyi görmek istiyorsunuz?
 
 # --- Karşılaştırılacak 4 Senaryo için Tarihleri Tanımla ---
 # (Bu tarihlerin CSV dosyanızda olduğundan emin olun)
