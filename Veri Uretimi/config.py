@@ -210,8 +210,8 @@ MAHALLE_PROFILLERI = {
     # --- YENİ EKLENEN MAHALLE: UNIVERSITE ---
     "Universite": {
         # Base değerler 7/24 çalışan HASTANE yükünü temsil eder.
-        'base_elektrik': 4000, 
-        'base_su': 300, 
+        'base_elektrik': 4000,  
+        'base_su': 500, 
         'base_dogalgaz': 350,
         
         # Yeni Kampüs profilinin tüm özelliklerini miras al
