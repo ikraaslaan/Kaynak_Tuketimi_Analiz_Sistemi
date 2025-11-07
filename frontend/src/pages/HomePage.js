@@ -167,7 +167,7 @@ const HomePage = ({ selectedNeighborhood, setSelectedNeighborhood }) => {
               return (
                 <div
                   key={index}
-                  className="bg-white rounded-3xl p-7 shadow-md hover:shadow-lg transition-all duration-300 border border-pink-200 transform hover:-translate-y-1"
+                  className="bg-white/25 backdrop-blur-xl rounded-3xl p-7 shadow-lg hover:shadow-emerald-300/40 transition-all duration-300 border border-white/30 transform hover:-translate-y-1"
                 >
                   <div className={`w-14 h-14 rounded-full flex items-center justify-center mb-5 border-2 ${getColorClasses(stat.color)}`}>
                     <Icon className="w-7 h-7" />
@@ -180,7 +180,7 @@ const HomePage = ({ selectedNeighborhood, setSelectedNeighborhood }) => {
           </div>
 
           {/* Mahalle Arama */}
-          <div id="search-section" className="bg-white rounded-3xl p-8 sm:p-10 shadow-lg border border-pink-200 mb-16" ref={searchContainerRef}>
+          <div id="search-section" className="bg-white/25 backdrop-blur-xl rounded-3xl p-7 shadow-lg hover:shadow-emerald-300/40 transition-all duration-300 border border-white/30 transform hover:-translate-y-1" ref={searchContainerRef}>
             <h2 className="text-3xl font-bold text-gray-800 mb-8 flex items-center gap-3">
               <Search className="w-8 h-8 text-emerald-500" />
               Mahalle Ara
@@ -196,17 +196,17 @@ const HomePage = ({ selectedNeighborhood, setSelectedNeighborhood }) => {
                   onFocus={() => setShowDropdown(true)}
                   onKeyDown={handleKeyDown}
                   placeholder="Bir mahalle ismi yazın..."
-                  className="w-full pl-14 pr-5 py-4 border border-pink-200 rounded-2xl focus:outline-none focus:ring-3 focus:ring-emerald-100 focus:border-emerald-300 transition-all duration-300 text-lg text-gray-800 placeholder:text-gray-400 shadow-sm"
+                  className="w-full pl-14 pr-5 py-4 border border-white/40 rounded-2xl bg-white/20 backdrop-blur-md text-gray-900 placeholder:text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:border-emerald-300 transition-all duration-300 shadow-md"
                 />
               </div>
 
               {showDropdown && filteredNeighborhoods.length > 0 && (
-                <div className="absolute z-10 w-full mt-3 bg-white rounded-2xl shadow-lg border border-pink-200 max-h-64 overflow-y-auto transform scale-98 animate-fade-in">
+                <div className="absolute z-10 w-full mt-3 bg-white/30 backdrop-blur-xl rounded-2xl shadow-lg border border-white/40 max-h-64 overflow-y-auto transform scale-98 animate-fade-in">
                   {filteredNeighborhoods.map((neighborhoodName, index) => (
                     <button
                       key={neighborhoodName}
                       onClick={() => handleSelectNeighborhood(neighborhoodName)}
-                      className={`w-full text-left px-5 py-4 hover:bg-pink-50 transition-all duration-200 flex items-center gap-4 ${
+                      className={`w-full text-left px-5 py-4 hover:bg-white/30 hover:backdrop-blur-xl transition-all duration-200 flex items-center gap-4 ${
                         index === highlightedIndex ? "bg-pink-50" : ""
                       } ${index === 0 ? "rounded-t-2xl" : ""} ${
                         index === filteredNeighborhoods.length - 1 ? "rounded-b-2xl" : "border-b border-pink-100"
@@ -221,13 +221,13 @@ const HomePage = ({ selectedNeighborhood, setSelectedNeighborhood }) => {
             </div>
 
             {selectedNeighborhood && (
-              <div className="mt-12 bg-gradient-to-br from-pink-50 to-pink-100 rounded-3xl p-8 border border-pink-200 animate-fade-in-up">
+              <div className="mt-12 bg-white/25 backdrop-blur-xl rounded-3xl p-8 border border-white/30 shadow-lg animate-fade-in-up hover:shadow-emerald-300/40 transition-all duration-300">
                 <h3 className="text-3xl font-bold text-gray-800 mb-7">
                   <span className="text-emerald-700">{selectedNeighborhood.name}</span> - Ortalama Tüketim Verileri
                 </h3>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                  <div className="bg-white rounded-2xl p-7 flex items-center gap-5 shadow-sm border border-pink-100 hover:shadow-md transition-all duration-200">
+                  <div className="bg-white/25 backdrop-blur-xl rounded-2xl p-7 flex items-center gap-5 shadow-lg border border-white/30 hover:shadow-emerald-300/30 transition-all duration-300">
                     <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center shadow-inner">
                       <Zap className="w-8 h-8 text-yellow-600" />
                     </div>
@@ -240,7 +240,7 @@ const HomePage = ({ selectedNeighborhood, setSelectedNeighborhood }) => {
                     </div>
                   </div>
 
-                  <div className="bg-white rounded-2xl p-7 flex items-center gap-5 shadow-sm border border-pink-100 hover:shadow-md transition-all duration-200">
+                  <div className="bg-white/25 backdrop-blur-xl rounded-2xl p-7 flex items-center gap-5 shadow-lg border border-white/30 hover:shadow-emerald-300/30 transition-all duration-300">
                     <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center shadow-inner">
                       <Droplets className="w-8 h-8 text-blue-600" />
                     </div>
@@ -253,7 +253,7 @@ const HomePage = ({ selectedNeighborhood, setSelectedNeighborhood }) => {
                     </div>
                   </div>
 
-                  <div className="bg-white rounded-2xl p-7 flex items-center gap-5 shadow-sm border border-pink-100 hover:shadow-md transition-all duration-200">
+                  <div className="bg-white/25 backdrop-blur-xl rounded-2xl p-7 flex items-center gap-5 shadow-lg border border-white/30 hover:shadow-emerald-300/30 transition-all duration-300">
                     <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center shadow-inner">
                       <Flame className="w-8 h-8 text-orange-600" />
                     </div>
@@ -268,7 +268,7 @@ const HomePage = ({ selectedNeighborhood, setSelectedNeighborhood }) => {
                 </div>
 
                 {/* Yeşil Grafik */}
-                <div className="bg-white rounded-3xl p-7 shadow-md border border-pink-100 mt-8 animate-fade-in-up">
+                <div className="bg-white rounded-3xl p-7 shadow-md border border-emerald-300 mt-8 animate-fade-in-up">
                   <h4 className="text-lg font-semibold text-gray-700 mb-5">Tüketim Özeti Grafiği</h4>
                   <ResponsiveContainer width="100%" height={250}>
                     <AreaChart
@@ -319,7 +319,7 @@ const HomePage = ({ selectedNeighborhood, setSelectedNeighborhood }) => {
                   </ResponsiveContainer>
                 </div>
 
-                <div className="mt-8 pt-7 border-t border-pink-200">
+                <div className="mt-8 pt-7 border-t border-emerald-300">
                   <p className="text-md text-gray-600 leading-relaxed">
                     Bu veriler, {selectedNeighborhood.name} mahallesinin genel tüketim eğilimlerini göstermektedir.
                   </p>
@@ -330,17 +330,17 @@ const HomePage = ({ selectedNeighborhood, setSelectedNeighborhood }) => {
 
           {/* En Alttaki 3 Kart */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-12">
-            <div className="bg-white rounded-3xl p-7 shadow-md border border-pink-200 text-center">
+            <div className="bg-white/25 backdrop-blur-xl rounded-3xl p-7 shadow-lg border border-white/30 text-center hover:shadow-emerald-300/40 transition-all duration-300">
               <Database className="w-8 h-8 text-emerald-600 mx-auto mb-4" />
               <p className="text-3xl font-bold text-gray-900">156K</p>
               <p className="text-sm text-gray-600">Veritabanında</p>
             </div>
-            <div className="bg-white rounded-3xl p-7 shadow-md border border-pink-200 text-center">
+            <div className="bg-white/25 backdrop-blur-xl rounded-3xl p-7 shadow-lg border border-white/30 text-center hover:shadow-emerald-300/40 transition-all duration-300">
               <TrendingUp className="w-8 h-8 text-emerald-600 mx-auto mb-4" />
               <p className="text-3xl font-bold text-gray-900">100%</p>
               <p className="text-sm text-gray-600">Sistem Uptime</p>
             </div>
-            <div className="bg-white rounded-3xl p-7 shadow-md border border-pink-200 text-center">
+            <div className="bg-white/25 backdrop-blur-xl rounded-3xl p-7 shadow-lg border border-white/30 text-center hover:shadow-emerald-300/40 transition-all duration-300">
               <Clock className="w-8 h-8 text-emerald-600 mx-auto mb-4" />
               <p className="text-3xl font-bold text-gray-900">5dk</p>
               <p className="text-sm text-gray-600">Önce Güncellendi</p>
