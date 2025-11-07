@@ -164,10 +164,28 @@ def get_saatlik_carpan(tarih, kaynak_tipi, profil):
         # --- DÜZELTME BURADA BİTİYOR ---
 
     elif kaynak_tipi == 'dogalgaz':
-        # ... (Bu kısım aynı) ...
+        # --- DOĞALGAZ İÇİN GÜNCELLENMİŞ BLOK ---
+        
         is_summer = ay in [4, 5, 6, 7, 8, 9] or (ay == 10 and tarih.day <= 20) or (ay == 3 and tarih.day > 15)
-        key_x = 'dogalgaz_yaz_x' if is_summer else 'dogalgaz_kis_x'
-        key_y = 'dogalgaz_yaz_y' if is_summer else 'dogalgaz_kis_y'
+        
+        if is_summer:
+            # Yaz ayları. Profilin hici/hsonu ayrımı yapıp yapmadığını kontrol et.
+            
+            test_key_yaz_hici = 'dogalgaz_yaz_hici_x'
+            
+            if test_key_yaz_hici in profil_listeleri:
+                # EVET, bu profil ayrım yapıyor (PROFIL_KAMPUS gibi)
+                key_x = 'dogalgaz_yaz_hsonu_x' if hafta_sonu else 'dogalgaz_yaz_hici_x'
+                key_y = key_x.replace('_x', '_y')
+            else:
+                # HAYIR, bu standart bir profil (PROFIL_KONUT gibi)
+                # Eski 'dogalgaz_yaz_x' anahtarını kullan
+                key_x = 'dogalgaz_yaz_x'
+                key_y = 'dogalgaz_yaz_y'
+        else:
+            # Kış ayları. (Değişiklik yok, 'dogalgaz_kis_x' kullanılır)
+            key_x = 'dogalgaz_kis_x'
+            key_y = 'dogalgaz_kis_y'
 
     X_SAATLER = profil_listeleri.get(key_x, [0, 24])
     Y_PROFIL = profil_listeleri.get(key_y, [1.0, 1.0])
