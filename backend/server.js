@@ -1,32 +1,25 @@
-require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
-const fs = require("fs");
-const path = require("path");
-const csv = require("csv-parser");
 const Consumption = require("./models/Consumption.js");
 const Average = require("./models/AverageConsumption.js");
 
 const app = express();
 app.use(express.json());
-app.use(cors());
 
-// Serve static files from the React app
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, 'client/build')));
-}
+// ✅ CORS
+app.use(cors({
+  origin: "http://localhost:3000",
+  credentials: true
+}));
 
-// MongoDB bağlantısı
-const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://23frontend23_db_user:uIiIKAqkiP0drca9@verikaynagi.bueal8j.mongodb.net/tuketim_analizi_db";
-const PORT = process.env.PORT || 5001;
-
-mongoose.connect(MONGO_URI)
+// ✅ MongoDB Bağlantısı
+mongoose.connect("mongodb+srv://23frontend23_db_user:uIiIKAqkiP0drca9@verikaynagi.bueal8j.mongodb.net/tuketim_analizi_db")
   .then(() => console.log("✅ MongoDB bağlantısı başarılı"))
   .catch(err => console.error("❌ MongoDB bağlantı hatası:", err));
 
-// 📥 CSV dosyasından veri içe aktarma endpoint'i
-app.get("/api/import-csv", async (req, res) => {
+// ✅ Mahalle Listesi
+app.get("/api/neighborhood-names", async (req, res) => {
   try {
     const results = [];
     const csvFilePath = path.join(__dirname, "Veri Uretimi", "tuketim_verisi_tum_mahalleler_detayli.csv");
@@ -347,8 +340,10 @@ app.get("/api/average-consumption", async (req, res) => {
 
     // 4. Çıktıyı döndür
     res.json({
-      message: "Haftalık ortalama başarıyla hesaplandı ve kaydedildi.",
-      ortalama
+      name: result[0]._id,
+      electricity: result[0].avgElectricity || 0,
+      water: result[0].avgWater || 0,
+      gas: result[0].avgGas || 0,
     });
 
   } catch (err) {
