@@ -119,7 +119,7 @@ node server.js
 npm start
 ```
 
-Backend `http://localhost:5000` adresinde çalışır.
+Backend `http://localhost:5002` adresinde çalışır.
 
 **📥 Python CSV Verilerini İçe Aktarma:**
 
@@ -127,10 +127,10 @@ CSV dosyasından verileri MongoDB'ye aktarmak için:
 
 ```bash
 # Backend çalışırken tarayıcıda aç:
-http://localhost:5000/api/import-csv
+http://localhost:5002/api/import-csv
 
 # Veya terminal'den:
-curl http://localhost:5000/api/import-csv
+curl http://localhost:5002/api/import-csv
 ```
 
 Detaylı entegrasyon rehberi için: [CSV_INTEGRATION_GUIDE.md](./CSV_INTEGRATION_GUIDE.md)

@@ -5,11 +5,13 @@ export const useConsumptionAPI = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Mahalle listesini backend'den çek
+  const API_BASE = "http://localhost:5002/api"; // ✅ PORT DÜZELTİLDİ
+
+  // Mahalle isimlerini yükle
   useEffect(() => {
     const loadNames = async () => {
       try {
-        const res = await fetch("http://localhost:5001/api/neighborhood-names");
+        const res = await fetch(`${API_BASE}/neighborhood-names`);
         if (!res.ok) throw new Error("API error");
         const data = await res.json();
         setNeighborhoods(data);
@@ -20,18 +22,23 @@ export const useConsumptionAPI = () => {
       }
     };
     loadNames();
-  }, []);
+  }, [API_BASE]);
 
-  // Seçilen mahalle için ortalama tüketim verileri
-  const getNeighborhoodAverages = useCallback(async (name, period) => {
-    try {
-      const res = await fetch(`http://localhost:5000/api/average/${name}?period=${period}`);
-      if (!res.ok) return null;
-      return await res.json();
-    } catch {
-      return null;
-    }
-  }, []);
+  // Seçilen mahalle için ortalama tüketim (BOŞLUK & TÜRKÇE karakter fix ✅)
+  const getNeighborhoodAverages = useCallback(
+    async (neighborhoodName, period) => {
+      try {
+        const encoded = encodeURIComponent(neighborhoodName); // ✅ En Önemli Kısım
+        const res = await fetch(`${API_BASE}/average/${encoded}?period=${period}`);
+        if (!res.ok) return null;
+        return await res.json();
+      } catch (err) {
+        console.log("Veri çekilemedi:", err);
+        return null;
+      }
+    },
+    [API_BASE]
+  );
 
   return { neighborhoods, loading, error, getNeighborhoodAverages };
 };
