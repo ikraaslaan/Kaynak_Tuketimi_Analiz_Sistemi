@@ -1,41 +1,81 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Navbar from "./components/Navbar";
 import HomePage from "./pages/HomePage";
 import Elektrik from "./pages/Elektrik";
 import Su from "./pages/Su";
 import Dogalgaz from "./pages/Dogalgaz";
 import Yonetici from "./pages/Yonetici";
-import EmailSubscription from "./components/EmailSubscription";
+import SubscriptionBox from "./components/SubscriptionBox";
+import KayitForm from "./pages/KayitForm";
+import AdminLogin from "./pages/AdminLogin"; 
 import "./App.css";
-import { AnimatePresence } from "framer-motion"; // YENİ: framer-motion import et
+import { AnimatePresence } from "framer-motion";
 
 function App() {
   const [activeTab, setActiveTab] = useState("home");
   const [selectedNeighborhood, setSelectedNeighborhood] = useState(null);
+  const [isAdminAuthed, setIsAdminAuthed] = useState(false);
+
+  // Admin giriş bilgisini okuma
+  useEffect(() => {
+    setIsAdminAuthed(localStorage.getItem("isAdminAuthed") === "true");
+  }, []);
+
+  const handleAdminSuccess = () => {
+    localStorage.setItem("isAdminAuthed", "true");
+    setIsAdminAuthed(true);
+    setActiveTab("yonetici");
+  };
+
+  const handleAdminLogout = () => {
+    localStorage.removeItem("isAdminAuthed");
+    setIsAdminAuthed(false);
+    setActiveTab("home");
+  };
+
+  // Kayıt formunun açılması için event dinleyicisini ekliyoruz
+  useEffect(() => {
+    const handleOpenForm = () => setActiveTab("kayit");
+    window.addEventListener("openKayitForm", handleOpenForm);
+
+    return () => {
+      window.removeEventListener("openKayitForm", handleOpenForm);
+    };
+  }, []);
 
   const renderContent = () => {
-    // YENİ: Animasyonun çalışması için her bileşene 'key' prop'u ekledik.
     switch (activeTab) {
       case "home":
         return (
           <HomePage
-            key="home" // YENİ
+            key="home"
             selectedNeighborhood={selectedNeighborhood}
             setSelectedNeighborhood={setSelectedNeighborhood}
           />
         );
+      case "kayit":
+        return <KayitForm key="kayit" />;
       case "elektrik":
-        return <Elektrik key="elektrik" selectedNeighborhood={selectedNeighborhood} />; // YENİ
+        return <Elektrik key="elektrik" selectedNeighborhood={selectedNeighborhood} />;
       case "su":
-        return <Su key="su" selectedNeighborhood={selectedNeighborhood} />; // YENİ
+        return <Su key="su" selectedNeighborhood={selectedNeighborhood} />;
       case "dogalgaz":
-        return <Dogalgaz key="dogalgaz" selectedNeighborhood={selectedNeighborhood} />; // YENİ
+        return <Dogalgaz key="dogalgaz" selectedNeighborhood={selectedNeighborhood} />;
       case "yonetici":
-        return <Yonetici key="yonetici" />; // YENİ
+        if (!isAdminAuthed) {
+          return (
+            <AdminLogin
+              key="adminlogin"
+              onSuccess={handleAdminSuccess}
+              onCancel={() => setActiveTab("home")}
+            />
+          );
+        }
+        return <Yonetici key="yonetici" onLogout={handleAdminLogout} />;
       default:
         return (
           <HomePage
-            key="home-default" // YENİ
+            key="home-default"
             selectedNeighborhood={selectedNeighborhood}
             setSelectedNeighborhood={setSelectedNeighborhood}
           />
@@ -45,16 +85,17 @@ function App() {
 
   return (
     <div className="min-h-screen bg-[#DDEEE3] relative">
-      <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
-
-      {/* YENİ: Sayfa içeriğini AnimatePresence ile sarmaladık */}
+      <Navbar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        onLogout={handleAdminLogout}
+        isAdminAuthed={isAdminAuthed}
+      />
       <AnimatePresence mode="wait">
         {renderContent()}
       </AnimatePresence>
-
-      {/* ✅ reCAPTCHA ile güvenli e-posta kutusu */}
       <div className="fixed bottom-4 right-4 z-50">
-        <EmailSubscription />
+        <SubscriptionBox /> {/* Kayıt Ol kutusu */}
       </div>
     </div>
   );

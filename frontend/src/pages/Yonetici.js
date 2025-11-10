@@ -1,7 +1,7 @@
 import React from "react";
-import { User, Settings, Shield, Bell, BarChart3, Users, Database, Clock } from "lucide-react";
+import { User, Settings, Shield, Bell, BarChart3, Users, Database, Clock, LogOut } from "lucide-react";
 
-const Yonetici = () => {
+const Yonetici = ({ onLogout }) => {
   const managementCards = [
     { title: "Kullanıcı Yönetimi", description: "Kullanıcı hesaplarını yönet", icon: Users, color: "blue" },
     { title: "Sistem Ayarları", description: "Yapılandırma ve ayarlar", icon: Settings, color: "gray" },
@@ -24,7 +24,19 @@ const Yonetici = () => {
   };
 
   return (
-    <div className="pt-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto pb-12">
+    <div className="pt-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto pb-12 relative">
+
+      {/* ✅ ÇIKIŞ YAP BUTONU */}
+      {onLogout && (
+        <button
+          onClick={onLogout}
+          className="absolute right-0 top-0 mt-3 mr-3 bg-white/90 border border-gray-300 text-gray-700 px-4 py-2 rounded-xl flex items-center gap-2 shadow hover:bg-gray-100 transition"
+        >
+          <LogOut className="w-5 h-5" />
+          Çıkış Yap
+        </button>
+      )}
+
       <div className="animate-fade-in">
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-2">
@@ -68,6 +80,7 @@ const Yonetici = () => {
               <p className="text-3xl font-bold text-blue-900">156K</p>
               <p className="text-sm text-blue-700 mt-1">Veritabanında</p>
             </div>
+
             <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-6 border border-green-200">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-green-900">Aktif Uptime</span>
@@ -76,6 +89,7 @@ const Yonetici = () => {
               <p className="text-3xl font-bold text-green-900">100%</p>
               <p className="text-sm text-green-700 mt-1">Sistem durumu</p>
             </div>
+
             <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl p-6 border border-purple-200">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-purple-900">Son Güncelleme</span>
@@ -86,10 +100,10 @@ const Yonetici = () => {
             </div>
           </div>
         </div>
+
       </div>
     </div>
   );
 };
 
 export default Yonetici;
-
