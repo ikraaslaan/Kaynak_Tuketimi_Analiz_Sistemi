@@ -108,14 +108,48 @@ while sanal_zaman <= bitis_tarihi:
 
     sanal_zaman = sanal_zaman + zaman_adimi
 
-# --- 5. SİMÜLASYON SONRASI ---
+# --- Simülasyon Sonrası ---
 bitis_zamani_gercek = time.time()
+
 df = pd.DataFrame(uretilen_veriler)
 print("-" * 30)
 print(f"Toplam Üretilen Veri Satırı: {len(df)}")
-print(f"Simülasyon Gerçek Süresi: {round(bitis_zamani_gercek - baslama_zamani_gercek, 2)} saniye")
 print("-" * 30)
 
-# CSV'ye KAYIT
+# ----------------------------------------------------
+# --- MONGODB'YE KAYIT BÖLÜMÜ (YORUM SATIRINA ALINDI) ---
+# ----------------------------------------------------
+
+# # DİKKAT: URI'yi .env'e taşımanız tavsiye edilir.
+# MONGODB_URI = "mongodb+srv://23frontend23_db_user:uIiIKAqkiP0drca9@verikaynagi.bueal8j.mongodb.net/?retryWrites=true&w=majority&appName=VeriKaynagi"
+# DB_NAME = "tuketim_analizi_db"
+# COLLECTION_NAME = "tuketim_kayitlari"
+
+# try:
+#     print(f"MongoDB Cloud'a bağlanılıyor ({DB_NAME}.{COLLECTION_NAME})...")
+#     client = MongoClient(MONGODB_URI)
+#     db = client[DB_NAME]
+#     collection = db[COLLECTION_NAME]
+
+#     # (Opsiyonel) Her çalıştırmada eski verileri silmek isterseniz:
+#     # collection.delete_many({})
+
+#     print(f"MongoDB'ye {len(uretilen_veriler)} adet JSON belgesi yükleniyor...")
+#     collection.insert_many(uretilen_veriler)
+#     print("MongoDB'ye kayıt başarıyla tamamlandı.")
+
+# except Exception as e:
+#     print(f"!!! HATA: MongoDB'ye kayıt başarısız: {e}")
+#     print("Lütfen connection string ve izinleri kontrol edin.")
+
+# finally:
+#     if "client" in locals() and client:
+#         client.close()
+#         print("MongoDB bağlantısı kapatıldı.")
+
+# ----------------------------------------------------
+# --- SADECE CSV'YE KAYIT ---
+
+output_filename = "tuketim_verisi_tum_mahalleler_detayli.csv"
 df.to_csv(output_filename, index=False, encoding="utf-8-sig")
 print(f"\n--- Veri '{output_filename}' dosyasına başarıyla kaydedildi! ---")
