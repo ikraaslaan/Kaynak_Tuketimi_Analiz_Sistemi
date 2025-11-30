@@ -3,6 +3,9 @@ import time
 import numpy as np
 import json
 from copy import deepcopy
+from pymongo import MongoClient
+import sys
+sys.stdout.reconfigure(encoding='utf-8')
 
 # --- 1. MODÜLLERİ İÇERİ AKTAR ---
 import uretim_modelleri as motor
@@ -11,13 +14,14 @@ from config import (
     PROFIL_PARK, PROFIL_KAMPUS
 )
 
-# --- 2. AYARLAR VE ŞABLON YÜKLEME ---
+# --- 2. AYARLAR ---
 baslangic_tarihi = pd.to_datetime("2022-01-01 00:00:00")
-bitis_tarihi = pd.to_datetime("2024-12-31 23:30:00")
-zaman_adimi = pd.Timedelta(minutes=30)
+bitis_tarihi     = pd.to_datetime("2022-12-31 23:30:00") 
+zaman_adimi      = pd.Timedelta(minutes=30)
+
 output_filename = "tuketim_verisi_tum_mahalleler_detayli.csv"
 
-# Şablon Kütüphanesini Hazırla
+# --- PROFİL ŞABLONLARINI YÜKLE ---
 TANIMLI_PROFIL_SABLONLARI = {
     "konut_standart": PROFIL_KONUT_STANDART,
     "sanayi": PROFIL_SANAYI,
@@ -26,7 +30,7 @@ TANIMLI_PROFIL_SABLONLARI = {
 }
 print("Profil şablonları (config.py) hafızaya yüklendi.")
 
-# --- 3. MAHALLELER.JSON'U YÜKLE VE BİRLEŞTİR ---
+# --- 3. MAHALLELER.JSON YÜKLE ---
 print("mahalleler.json dosyası okunuyor...")
 try:
     with open('mahalleler.json', 'r', encoding='utf-8') as f:
@@ -35,121 +39,100 @@ except FileNotFoundError:
     print("HATA: mahalleler.json dosyası bulunamadı.")
     exit()
 
-# JSON ve Şablonları birleştirerek ana MAHALLE_PROFILLERI sözlüğünü oluştur
+# JSON → PROFİL BİRLEŞTİR
 MAHALLE_PROFILLERI = {}
 for mahalle_data in mahalle_listesi_json:
     mahalle_adi = mahalle_data["mahalle_adi"]
     profil_tipi_adi = mahalle_data["profil_tipi"]
     
     if profil_tipi_adi in TANIMLI_PROFIL_SABLONLARI:
-        # 1. Ana şablonu kopyala (deepcopy ile tam bağımsız kopya)
         profil_sablonu = deepcopy(TANIMLI_PROFIL_SABLONLARI[profil_tipi_adi])
-        
-        # 2. JSON'daki base değerlerini şablona ekle
         profil_sablonu.update(mahalle_data)
-        
-        # 3. (İzzetpaşa gibi) özel saatlik profiller varsa, ana şablonu "ez"
+
         if "ozel_saatlik_profiller" in mahalle_data:
             profil_sablonu['saatlik_profiller'].update(mahalle_data["ozel_saatlik_profiller"])
-            
+
         MAHALLE_PROFILLERI[mahalle_adi] = profil_sablonu
     else:
-        print(f"UYARI: '{mahalle_adi}' için '{profil_tipi_adi}' profili 'config.py'de bulunamadı.")
+        print(f"UYARI → '{mahalle_adi}' için profil bulunamadı: {profil_tipi_adi}")
 
-print(f"{len(MAHALLE_PROFILLERI)} mahalle (mahalleler.json) simülasyona hazır.")
-print(f"Tanımlı Mahalleler: {list(MAHALLE_PROFILLERI.keys())}")
-print("-" * 30)
-print("Simülatör Başlatılıyor...")
-print(f"Simülasyon Aralığı: {baslangic_tarihi} -> {bitis_tarihi}")
-print("-" * 30)
+print(f"{len(MAHALLE_PROFILLERI)} mahalle ile 1 yıllık simülasyon başlatılıyor")
+print("-"*30)
 
-# --- 4. ANA SİMÜLASYON DÖNGÜSÜ ---
-baslama_zamani_gercek = time.time()
+# --- 4. SİMÜLASYON ---
+print("Simülatör çalışıyor...")
+baslama_zaman = time.time()
 uretilen_veriler = []
 sanal_zaman = baslangic_tarihi
 
 while sanal_zaman <= bitis_tarihi:
     for mahalle_adi, profil in MAHALLE_PROFILLERI.items():
-        
-        # --- TÜM ÇARPANLARI HESAPLA ---
+
         carpan_mevsim_e = motor.get_mevsimsel_carpan(sanal_zaman, "elektrik", profil)
         carpan_mevsim_s = motor.get_mevsimsel_carpan(sanal_zaman, "su", profil)
         carpan_mevsim_d = motor.get_mevsimsel_carpan(sanal_zaman, "dogalgaz", profil)
-        carpan_gun = motor.get_gun_tipi_carpan(sanal_zaman, profil)
-        carpan_akademik = motor.get_akademik_carpan(sanal_zaman, profil)
-        carpan_saat_e = motor.get_saatlik_carpan(sanal_zaman, "elektrik", profil)
-        carpan_saat_s = motor.get_saatlik_carpan(sanal_zaman, "su", profil)
-        carpan_saat_d = motor.get_saatlik_carpan(sanal_zaman, "dogalgaz", profil)
+
+        carpan_gun     = motor.get_gun_tipi_carpan(sanal_zaman, profil)
+        carpan_akademik= motor.get_akademik_carpan(sanal_zaman, profil)
+
+        carpan_saat_e  = motor.get_saatlik_carpan(sanal_zaman, "elektrik", profil)
+        carpan_saat_s  = motor.get_saatlik_carpan(sanal_zaman, "su", profil)
+        carpan_saat_d  = motor.get_saatlik_carpan(sanal_zaman, "dogalgaz", profil)
+
         gurultu_e = np.random.normal(1.0, 0.08)
         gurultu_s = np.random.normal(1.0, 0.08)
         gurultu_d = np.random.normal(1.0, 0.05)
 
-        # --- FİNAL HESAPLAMA (BASİT VERSİYON) ---
-        anlik_elektrik = (
-            profil["base_elektrik"] * carpan_mevsim_e * carpan_gun * carpan_akademik * carpan_saat_e * gurultu_e
-        )
-        anlik_su = (
-            profil["base_su"] * carpan_mevsim_s * carpan_gun * carpan_akademik * carpan_saat_s * gurultu_s
-        )
-        anlik_dogalgaz = (
-            profil["base_dogalgaz"] * carpan_mevsim_d * carpan_gun * carpan_akademik * carpan_saat_d * gurultu_d
-        )
+        uretilen_veriler.append({
+            "Tarih": sanal_zaman.to_pydatetime(),
+            "Mahalle": mahalle_adi,
+            "Elektrik_Tuketim": round(profil["base_elektrik"] * carpan_mevsim_e * carpan_gun * carpan_akademik * carpan_saat_e * gurultu_e, 2),
+            "Su_Tuketim":       round(profil["base_su"]       * carpan_mevsim_s * carpan_gun * carpan_akademik * carpan_saat_s * gurultu_s, 2),
+            "Dogalgaz_Tuketim": round(profil["base_dogalgaz"] * carpan_mevsim_d * carpan_gun * carpan_akademik * carpan_saat_d * gurultu_d, 2),
+        })
 
-        # Listeye Ekle
-        uretilen_veriler.append(
-            {
-                "Tarih": sanal_zaman,
-                "Mahalle": mahalle_adi,
-                "Elektrik_Tuketim": round(anlik_elektrik, 2),
-                "Su_Tuketim": round(anlik_su, 2),
-                "Dogalgaz_Tuketim": round(anlik_dogalgaz, 2),
-            }
-        )
-
-    sanal_zaman = sanal_zaman + zaman_adimi
-
-# --- Simülasyon Sonrası ---
-bitis_zamani_gercek = time.time()
+    sanal_zaman += zaman_adimi
 
 df = pd.DataFrame(uretilen_veriler)
-print("-" * 30)
-print(f"Toplam Üretilen Veri Satırı: {len(df)}")
-print("-" * 30)
+print("-"*30)
+print("Toplam Üretilen Kayıt:", len(df))
+print("-"*30)
 
-# ----------------------------------------------------
-# --- MONGODB'YE KAYIT BÖLÜMÜ (YORUM SATIRINA ALINDI) ---
-# ----------------------------------------------------
 
-# # DİKKAT: URI'yi .env'e taşımanız tavsiye edilir.
-# MONGODB_URI = "mongodb+srv://23frontend23_db_user:uIiIKAqkiP0drca9@verikaynagi.bueal8j.mongodb.net/?retryWrites=true&w=majority&appName=VeriKaynagi"
-# DB_NAME = "tuketim_analizi_db"
-# COLLECTION_NAME = "tuketim_kayitlari"
+# ---------------------------------------------------------
+# --- MONGODB KAYIT (YENİ URI İLE) ---
+# ---------------------------------------------------------
 
-# try:
-#     print(f"MongoDB Cloud'a bağlanılıyor ({DB_NAME}.{COLLECTION_NAME})...")
-#     client = MongoClient(MONGODB_URI)
-#     db = client[DB_NAME]
-#     collection = db[COLLECTION_NAME]
+MONGODB_URI = "mongodb+srv://23frontend23_db_user:PaoDBStFSwY3nPR0@verikaynagi.bueal8j.mongodb.net"
 
-#     # (Opsiyonel) Her çalıştırmada eski verileri silmek isterseniz:
-#     # collection.delete_many({})
+DB_NAME = "tuketim_analizi_db"
+COLLECTION_NAME = "tuketim_kayitlari"
 
-#     print(f"MongoDB'ye {len(uretilen_veriler)} adet JSON belgesi yükleniyor...")
-#     collection.insert_many(uretilen_veriler)
-#     print("MongoDB'ye kayıt başarıyla tamamlandı.")
+try:
+    print(f"MongoDB'ye bağlanılıyor -> {DB_NAME}.{COLLECTION_NAME}")
+    client = MongoClient(MONGODB_URI)
+    db = client[DB_NAME]
+    collection = db[COLLECTION_NAME]
 
-# except Exception as e:
-#     print(f"!!! HATA: MongoDB'ye kayıt başarısız: {e}")
-#     print("Lütfen connection string ve izinleri kontrol edin.")
+    batch_size = 5000
+    total = len(uretilen_veriler)
+    print(f"{total} kayıt -> {batch_size}'lik paketlerle yükleniyor...")
 
-# finally:
-#     if "client" in locals() and client:
-#         client.close()
-#         print("MongoDB bağlantısı kapatıldı.")
+    for i in range(0, total, batch_size):
+        collection.insert_many(uretilen_veriler[i:i+batch_size])
+        print(f"{min(i+batch_size,total)} / {total} yüklendi...")
 
-# ----------------------------------------------------
-# --- SADECE CSV'YE KAYIT ---
+    print("MongoDB'ye tüm kayıtlar başarıyla kaydedildi!")
 
-output_filename = "tuketim_verisi_tum_mahalleler_detayli.csv"
+except Exception as e:
+    print("MongoDB Hatası:", e)
+
+finally:
+    try: client.close()
+    except: pass
+    print("Bağlantı kapatıldı.")
+
+
+
 df.to_csv(output_filename, index=False, encoding="utf-8-sig")
-print(f"\n--- Veri '{output_filename}' dosyasına başarıyla kaydedildi! ---")
+print(f"\n CSV Kaydedildi → {output_filename}")
