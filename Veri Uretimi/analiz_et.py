@@ -1,20 +1,22 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import sys
+sys.stdout.reconfigure(encoding='utf-8')
 
 print("Nihai Karşılaştırmalı Analiz script'i başlatıldı...")
 print("-" * 30)
 
 # --- AYARLAR ---
 CSV_DOSYASI = 'tuketim_verisi_tum_mahalleler_detayli.csv'
-ANALIZ_MAHALLE = 'Universite' # Hangi mahalleyi görmek istiyorsunuz?
+ANALIZ_MAHALLE = 'Çaydaçıra' # Hangi mahalleyi görmek istiyorsunuz?
 
 # --- Karşılaştırılacak 4 Senaryo için Tarihleri Tanımla ---
 # (Bu tarihlerin CSV dosyanızda olduğundan emin olun)
-TARIH_KIS_HICI = '2023-01-09'  # Pazartesi (Kış - Hafta İçi)
-TARIH_KIS_HSONU = '2023-01-14' # Cumartesi (Kış - Hafta Sonu)
-TARIH_YAZ_HICI = '2023-07-10'  # Pazartesi (Yaz - Hafta İçi)
-TARIH_YAZ_HSONU = '2023-07-15' # Cumartesi (Yaz - Hafta Sonu)
+TARIH_KIS_HICI  = '2022-01-10'  # Pazartesi
+TARIH_KIS_HSONU = '2022-01-15'  # Cumartesi
+TARIH_YAZ_HICI  = '2022-07-11'  # Pazartesi
+TARIH_YAZ_HSONU = '2022-07-16'  # Cumartesi
 
 print(f"Analiz Mahallesi: {ANALIZ_MAHALLE}")
 print(f"1. {TARIH_KIS_HICI} (Kış - Hafta İçi)")
