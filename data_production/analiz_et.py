@@ -9,14 +9,14 @@ print("-" * 30)
 
 # --- AYARLAR ---
 CSV_DOSYASI = 'tuketim_verisi_tum_mahalleler_detayli.csv'
-ANALIZ_MAHALLE = 'İzzetpaşa' # Hangi mahalleyi görmek istiyorsunuz?
+ANALIZ_MAHALLE = 'Çaydaçıra' # Hangi mahalleyi görmek istiyorsunuz?
 
 # --- Karşılaştırılacak 4 Senaryo için Tarihleri Tanımla ---
 # (Bu tarihlerin CSV dosyanızda olduğundan emin olun)
-TARIH_KIS_HICI = '2022-01-09'  # Pazartesi (Kış - Hafta İçi)
-TARIH_KIS_HSONU = '2022-01-14' # Cumartesi (Kış - Hafta Sonu)
-TARIH_YAZ_HICI = '2022-07-10'  # Pazartesi (Yaz - Hafta İçi)
-TARIH_YAZ_HSONU = '2022-07-15' # Cumartesi (Yaz - Hafta Sonu)
+TARIH_KIS_HICI = '2022-01-10'  # Pazartesi (Kış - Hafta İçi)
+TARIH_KIS_HSONU = '2022-01-15' # Cumartesi (Kış - Hafta Sonu)
+TARIH_YAZ_HICI = '2022-07-11'  # Pazartesi (Yaz - Hafta İçi)
+TARIH_YAZ_HSONU = '2022-07-16' # Cumartesi (Yaz - Hafta Sonu)
 
 print(f"Analiz Mahallesi: {ANALIZ_MAHALLE}")
 print(f"1. {TARIH_KIS_HICI} (Kış - Hafta İçi)")
