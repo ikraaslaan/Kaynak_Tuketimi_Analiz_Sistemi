@@ -1,0 +1,43 @@
+[
+  {
+    "mahalle_adi": "Çaydaçıra",
+    "profil_tipi": "konut_standart",
+    "base_elektrik": 3000,
+    "base_su": 150,
+    "base_dogalgaz": 200
+  },
+  {
+    "mahalle_adi": "İzzetpaşa",
+    "profil_tipi": "konut_standart",
+    "base_elektrik": 2200,
+    "base_su": 110,
+    "base_dogalgaz": 180,
+    "ozel_saatlik_profiller": {
+      "elektrik_hici_x": [0, 6, 8, 9, 11, 16, 18, 20, 22, 24],
+      "elektrik_hici_y": [0.8, 0.3, 1.6, 1.6, 0.8, 0.8, 1.5, 2.0, 1.5, 0.8],
+      "su_hici_x": [0, 5, 9, 10.5, 12, 17, 19, 21, 24],
+      "su_hici_y": [0.4, 0.1, 2.2, 2.2, 0.7, 0.7, 1.5, 1.5, 0.4]
+    }
+  },
+  {
+    "mahalle_adi": "Sanayi",
+    "profil_tipi": "sanayi",
+    "base_elektrik": 8000,
+    "base_su": 100,
+    "base_dogalgaz": 50
+  },
+  {
+    "mahalle_adi": "Kültürpark",
+    "profil_tipi": "park",
+    "base_elektrik": 1500,
+    "base_su": 80,
+    "base_dogalgaz": 5
+  },
+  {
+    "mahalle_adi": "Universite",
+    "profil_tipi": "kampus",
+    "base_elektrik": 4000,
+    "base_su": 500,
+    "base_dogalgaz": 350
+  }
+]
