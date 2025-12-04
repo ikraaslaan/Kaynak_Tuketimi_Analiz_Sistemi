@@ -1,7 +1,6 @@
 import pandas as pd
 import time
 import numpy as np
-import json
 from copy import deepcopy
 from pymongo import MongoClient
 import sys
@@ -18,37 +17,62 @@ from config import (
 baslangic_tarihi = pd.to_datetime("2022-01-01 00:00:00")
 bitis_tarihi     = pd.to_datetime("2022-12-31 23:30:00") 
 zaman_adimi      = pd.Timedelta(minutes=30)
+output_filename  = "tuketim_verisi_tum_mahalleler_detayli.csv"
 
-output_filename = "tuketim_verisi_tum_mahalleler_detayli.csv"
+# --- MONGODB BAĞLANTISI ---
+MONGODB_URI = "mongodb+srv://23frontend23_db_user:PaoDBStFSwY3nPR0@verikaynagi.bueal8j.mongodb.net"
+DB_NAME = "tuketim_analizi_db"
 
-# --- PROFİL ŞABLONLARINI YÜKLE ---
+print("Veritabanına bağlanılıyor...")
+client = MongoClient(MONGODB_URI)
+db = client[DB_NAME]
+
+# İki ayrı koleksiyon kullanıyoruz:
+col_tanimlar = db["mahalle_tanimlari"]  # OKUMA YAPACAĞIMIZ YER (Eski json)
+col_kayitlar = db["tuketim_kayitlari"]  # YAZMA YAPACAĞIMIZ YER (Sonuçlar)
+
+# --- TEMİZLİK ---
+# Simülasyonun kapsadığı tarih aralığını temizle
+print(f"TEMİZLİK: {baslangic_tarihi} ile {bitis_tarihi} arasındaki eski veriler siliniyor...")
+col_kayitlar.delete_many({
+    "Tarih": {"$gte": baslangic_tarihi, "$lte": bitis_tarihi}
+})
+print("Temizlik tamamlandı.")
+
+
+# --- 3. MAHALLELERİ VERİTABANINDAN ÇEK ---
+print("Mahalle tanımları veritabanından okunuyor...")
+
+# _id:0 diyerek MongoDB'nin kendi ID'sini çekmiyoruz, kafa karıştırmasın
+mahalle_listesi_db = list(col_tanimlar.find({}, {"_id": 0}))
+
+if not mahalle_listesi_db:
+    print("HATA: Veritabanında kayıtlı mahalle bulunamadı! Lütfen önce verileri yükleyin.")
+    exit()
+
+# PROFİL BİRLEŞTİRME (Logic Aynen Kalıyor)
+# Bu kısım İzzetpaşa'nın özel verilerini alıp işlemeyi başarır
 TANIMLI_PROFIL_SABLONLARI = {
     "konut_standart": PROFIL_KONUT_STANDART,
     "sanayi": PROFIL_SANAYI,
     "park": PROFIL_PARK,
     "kampus": PROFIL_KAMPUS
 }
-print("Profil şablonları (config.py) hafızaya yüklendi.")
 
-# --- 3. MAHALLELER.JSON YÜKLE ---
-print("mahalleler.json dosyası okunuyor...")
-try:
-    with open('mahalleler.json', 'r', encoding='utf-8') as f:
-        mahalle_listesi_json = json.load(f)
-except FileNotFoundError:
-    print("HATA: mahalleler.json dosyası bulunamadı.")
-    exit()
-
-# JSON → PROFİL BİRLEŞTİR
 MAHALLE_PROFILLERI = {}
-for mahalle_data in mahalle_listesi_json:
+for mahalle_data in mahalle_listesi_db:
     mahalle_adi = mahalle_data["mahalle_adi"]
     profil_tipi_adi = mahalle_data["profil_tipi"]
     
     if profil_tipi_adi in TANIMLI_PROFIL_SABLONLARI:
         profil_sablonu = deepcopy(TANIMLI_PROFIL_SABLONLARI[profil_tipi_adi])
+        
+        # Veritabanından gelen veriyi (Base değerler vb.) şablona ekle
         profil_sablonu.update(mahalle_data)
 
+        # İZZETPAŞA KONTROLÜ:
+        # Veritabanından gelen veride "ozel_saatlik_profiller" varsa,
+        # kod burayı otomatik olarak görür ve işler.
         if "ozel_saatlik_profiller" in mahalle_data:
             profil_sablonu['saatlik_profiller'].update(mahalle_data["ozel_saatlik_profiller"])
 
@@ -56,7 +80,7 @@ for mahalle_data in mahalle_listesi_json:
     else:
         print(f"UYARI → '{mahalle_adi}' için profil bulunamadı: {profil_tipi_adi}")
 
-print(f"{len(MAHALLE_PROFILLERI)} mahalle ile 1 yıllık simülasyon başlatılıyor")
+print(f"{len(MAHALLE_PROFILLERI)} mahalle veritabanından başarıyla yüklendi.")
 print("-"*30)
 
 # --- 4. SİMÜLASYON ---
@@ -84,7 +108,7 @@ while sanal_zaman <= bitis_tarihi:
         gurultu_d = np.random.normal(1.0, 0.05)
 
         uretilen_veriler.append({
-            "Tarih": sanal_zaman.to_pydatetime(),
+            "Tarih": sanal_zaman, # Datetime objesi olarak kalabilir, PyMongo bunu sever.
             "Mahalle": mahalle_adi,
             "Elektrik_Tuketim": round(profil["base_elektrik"] * carpan_mevsim_e * carpan_gun * carpan_akademik * carpan_saat_e * gurultu_e, 2),
             "Su_Tuketim":       round(profil["base_su"]       * carpan_mevsim_s * carpan_gun * carpan_akademik * carpan_saat_s * gurultu_s, 2),
@@ -93,46 +117,32 @@ while sanal_zaman <= bitis_tarihi:
 
     sanal_zaman += zaman_adimi
 
-df = pd.DataFrame(uretilen_veriler)
+# --- SONUÇLARI KAYDETME ---
 print("-"*30)
-print("Toplam Üretilen Kayıt:", len(df))
-print("-"*30)
-
-
-# ---------------------------------------------------------
-# --- MONGODB KAYIT (YENİ URI İLE) ---
-# ---------------------------------------------------------
-
-MONGODB_URI = "mongodb+srv://23frontend23_db_user:PaoDBStFSwY3nPR0@verikaynagi.bueal8j.mongodb.net"
-
-DB_NAME = "tuketim_analizi_db"
-COLLECTION_NAME = "tuketim_kayitlari"
+print(f"Toplam Üretilen Kayıt: {len(uretilen_veriler)}")
+print("MongoDB'ye yazılıyor...")
 
 try:
-    print(f"MongoDB'ye bağlanılıyor -> {DB_NAME}.{COLLECTION_NAME}")
-    client = MongoClient(MONGODB_URI)
-    db = client[DB_NAME]
-    collection = db[COLLECTION_NAME]
-
     batch_size = 5000
     total = len(uretilen_veriler)
-    print(f"{total} kayıt -> {batch_size}'lik paketlerle yükleniyor...")
-
+    
+    # Koleksiyonu önce temizlemek ister misin? (İsteğe bağlı)
+    # col_kayitlar.delete_many({}) 
+    
     for i in range(0, total, batch_size):
-        collection.insert_many(uretilen_veriler[i:i+batch_size])
+        col_kayitlar.insert_many(uretilen_veriler[i:i+batch_size])
         print(f"{min(i+batch_size,total)} / {total} yüklendi...")
 
-    print("MongoDB'ye tüm kayıtlar başarıyla kaydedildi!")
+    print("İşlem Başarılı!")
 
 except Exception as e:
-    print("MongoDB Hatası:", e)
+    print("Veritabanı Hatası:", e)
 
 finally:
-    try: client.close()
-    except: pass
+    client.close()
     print("Bağlantı kapatıldı.")
 
-
-
+# CSV olarak da dursun istersen
+df = pd.DataFrame(uretilen_veriler)
 df.to_csv(output_filename, index=False, encoding="utf-8-sig")
-print(f"\n CSV Kaydedildi → {output_filename}")
+print(f"Yedek CSV oluşturuldu: {output_filename}")
