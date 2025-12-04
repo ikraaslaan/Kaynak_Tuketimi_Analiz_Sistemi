@@ -43,49 +43,50 @@ const HomePage = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const hydrateSelection = useCallback(
-  async (neighborhoodName, uiPeriod) => {
-    if (!neighborhoodName) return;
+ const hydrateSelection = useCallback(
+    async (neighborhoodName, uiPeriod) => {
+      if (!neighborhoodName) return;
 
-    // ✅ UI butonları → API parametre eşleştirme
-    const apiPeriod = uiPeriod || "all";
+      // ✅ UI butonları → API parametre eşleştirme
+      const apiPeriod = uiPeriod || "all";
 
-    const averages = await getNeighborhoodAverages(neighborhoodName, apiPeriod);
+      const averages = await getNeighborhoodAverages(neighborhoodName, apiPeriod);
 
-    // ✅ Backend → Frontend veri alanları eşleştirildi
-    if (averages) {
-      const payload = {
-        name: averages.Mahalle ?? neighborhoodName,
-        electricity: Number(averages.Ortalama_Elektrik_Tuketim ?? 0),
-        water: Number(averages.Ortalama_Su_Tuketim ?? 0),
-        gas: Number(averages.Ortalama_Dogalgaz_Tuketim ?? 0),
-      };
+      // ✅ DÜZELTME BURADA YAPILDI:
+      // Backend 'averageElectricity' gönderiyor, biz onu alıp 'electricity'ye atıyoruz.
+      if (averages) {
+        const payload = {
+          name: neighborhoodName, // Backend isim dönmeyebilir, seçilen ismi kullanalım
+          electricity: Number(averages.averageElectricity ?? 0), // DÜZELTİLDİ
+          water: Number(averages.averageWater ?? 0),             // DÜZELTİLDİ
+          gas: Number(averages.averageGas ?? 0),                 // DÜZELTİLDİ
+        };
 
-      console.log("✅ Backend Verisi:", averages);
-      console.log("✅ Frontend’e Aktarılan:", payload);
+        console.log("✅ Backend Verisi:", averages);
+        console.log("✅ Frontend’e Aktarılan:", payload);
 
-      setSelectedNeighborhood(payload);
-      setCurrentNeighborhoodName(payload.name);
-      setSearchQuery(payload.name);
-      localStorage.setItem("lastSelectedNeighborhoodName", payload.name);
-    } else {
-      // ❗ Veri yoksa boş düşmeyi engelle
-      setSelectedNeighborhood({
-        name: neighborhoodName,
-        electricity: 0,
-        water: 0,
-        gas: 0,
-      });
-      setCurrentNeighborhoodName(neighborhoodName);
-      setSearchQuery(neighborhoodName);
-      localStorage.setItem("lastSelectedNeighborhoodName", neighborhoodName);
-    }
+        setSelectedNeighborhood(payload);
+        setCurrentNeighborhoodName(payload.name);
+        setSearchQuery(payload.name);
+        localStorage.setItem("lastSelectedNeighborhoodName", payload.name);
+      } else {
+        // ❗ Veri yoksa boş düşmeyi engelle
+        setSelectedNeighborhood({
+          name: neighborhoodName,
+          electricity: 0,
+          water: 0,
+          gas: 0,
+        });
+        setCurrentNeighborhoodName(neighborhoodName);
+        setSearchQuery(neighborhoodName);
+        localStorage.setItem("lastSelectedNeighborhoodName", neighborhoodName);
+      }
 
-    setShowDropdown(false);
-    setHighlightedIndex(-1);
-  },
-  [getNeighborhoodAverages]
-);
+      setShowDropdown(false);
+      setHighlightedIndex(-1);
+    },
+    [getNeighborhoodAverages]
+  );
 
 // Mahalle seçildiğinde hydrateSelection çalıştır
 const handleSelectNeighborhood = useCallback(

@@ -3,12 +3,10 @@ import { User, Settings, Shield, Bell, BarChart3, Users, Database, Clock, LogOut
 
 const Yonetici = ({ onLogout }) => {
   const managementCards = [
-    { title: "Kullanıcı Yönetimi", description: "Kullanıcı hesaplarını yönet", icon: Users, color: "blue" },
     { title: "Sistem Ayarları", description: "Yapılandırma ve ayarlar", icon: Settings, color: "gray" },
     { title: "Güvenlik", description: "Güvenlik ayarları", icon: Shield, color: "green" },
     { title: "Bildirimler", description: "Sistem bildirimleri", icon: Bell, color: "yellow" },
     { title: "Raporlar", description: "Analitik raporlar", icon: BarChart3, color: "purple" },
-    { title: "Kullanıcı Profili", description: "Profil bilgileriniz", icon: User, color: "indigo" },
   ];
 
   const getColorClasses = (color) => {

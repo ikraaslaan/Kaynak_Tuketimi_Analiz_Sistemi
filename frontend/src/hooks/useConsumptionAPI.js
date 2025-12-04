@@ -5,7 +5,7 @@ export const useConsumptionAPI = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const API_BASE = "http://localhost:5002/api"; // ✅ PORT DÜZELTİLDİ
+  const API_BASE = "http://localhost:5001/api"; // ✅ PORT DÜZELTİLDİ
 
   // Mahalle isimlerini yükle
   useEffect(() => {
