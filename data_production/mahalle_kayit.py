@@ -6,7 +6,7 @@ import sys
 sys.stdout.reconfigure(encoding='utf-8')
 
 # 1. MongoDB Bağlantısı
-uri = "mongodb+srv://23frontend23_db_user:PaoDBStFSwY3nPR0@verikaynagi.bueal8j.mongodb.net"
+uri = "Mongodb bağlantı URI'nizi buraya ekleyin"
 client = MongoClient(uri)
 db = client["tuketim_analizi_db"]
 collection = db["mahalle_tanimlari"] # Verilerin duracağı yeni yer
