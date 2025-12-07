@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import Navbar from "./components/Navbar";
 import HomePage from "./pages/HomePage";
 import Elektrik from "./pages/Elektrik";
@@ -7,33 +7,28 @@ import Dogalgaz from "./pages/Dogalgaz";
 import Yonetici from "./pages/Yonetici";
 import SubscriptionBox from "./components/SubscriptionBox";
 import KayitForm from "./pages/KayitForm";
-import AdminLogin from "./pages/AdminLogin"; 
+import AdminLogin from "./pages/AdminLogin";
 import "./App.css";
 import { AnimatePresence } from "framer-motion";
+import AuthContext from "./context/AuthContext"; // <-- BİZİM CONTEXT'İ EKLEDİK
 
 function App() {
   const [activeTab, setActiveTab] = useState("home");
   const [selectedNeighborhood, setSelectedNeighborhood] = useState(null);
-  const [isAdminAuthed, setIsAdminAuthed] = useState(false);
 
-  // Admin giriş bilgisini okuma
-  useEffect(() => {
-    setIsAdminAuthed(localStorage.getItem("isAdminAuthed") === "true");
-  }, []);
+  // Context'ten kullanıcı bilgisini ve çıkış fonksiyonunu çekiyoruz
+  // Artık state veya localStorage ile uğraşmak yok!
+  const { user, logout } = useContext(AuthContext);
 
-  const handleAdminSuccess = () => {
-    localStorage.setItem("isAdminAuthed", "true");
-    setIsAdminAuthed(true);
-    setActiveTab("yonetici");
-  };
+  // Kullanıcı var mı? Varsa admindir.
+  const isAdminAuthed = !!user; 
 
   const handleAdminLogout = () => {
-    localStorage.removeItem("isAdminAuthed");
-    setIsAdminAuthed(false);
-    setActiveTab("home");
+    logout(); // Context'teki çıkış fonksiyonunu çalıştır
+    setActiveTab("home"); // Anasayfaya at
   };
 
-  // Kayıt formunun açılması için event dinleyicisini ekliyoruz
+  // Kayıt formunun açılması için event dinleyicisi
   useEffect(() => {
     const handleOpenForm = () => setActiveTab("kayit");
     window.addEventListener("openKayitForm", handleOpenForm);
@@ -56,21 +51,34 @@ function App() {
       case "kayit":
         return <KayitForm key="kayit" />;
       case "elektrik":
-        return <Elektrik key="elektrik" selectedNeighborhood={selectedNeighborhood} />;
+        return (
+          <Elektrik
+            key="elektrik"
+            selectedNeighborhood={selectedNeighborhood}
+          />
+        );
       case "su":
         return <Su key="su" selectedNeighborhood={selectedNeighborhood} />;
       case "dogalgaz":
-        return <Dogalgaz key="dogalgaz" selectedNeighborhood={selectedNeighborhood} />;
+        return (
+          <Dogalgaz
+            key="dogalgaz"
+            selectedNeighborhood={selectedNeighborhood}
+          />
+        );
       case "yonetici":
+        // Eğer kullanıcı (token) yoksa Giriş Ekranını göster
         if (!isAdminAuthed) {
           return (
             <AdminLogin
               key="adminlogin"
-              onSuccess={handleAdminSuccess}
-              onCancel={() => setActiveTab("home")}
+              // Giriş başarılı olduğunda Context otomatik güncellenir
+              // ve React bu bileşeni yeniden render edip alttaki (Yonetici) satıra geçer.
+              // O yüzden buraya ekstra bir success fonksiyonu yazmamıza gerek kalmadı.
             />
           );
         }
+        // Kullanıcı varsa Yönetici Panelini göster
         return <Yonetici key="yonetici" onLogout={handleAdminLogout} />;
       default:
         return (
@@ -95,7 +103,7 @@ function App() {
         {renderContent()}
       </AnimatePresence>
       <div className="fixed bottom-4 right-4 z-50">
-        <SubscriptionBox /> {/* Kayıt Ol kutusu */}
+        <SubscriptionBox /> 
       </div>
     </div>
   );

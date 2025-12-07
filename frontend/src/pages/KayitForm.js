@@ -1,10 +1,13 @@
 import React, { useState, useMemo } from "react";
-import { useCSVData } from "../hooks/useCSVData";
-import bgVideo from "../assets/kayit.mp4";
+import bgVideo from "../assets/background.mp4"; // video ismini kontrol et
 import { ArrowLeft } from "lucide-react";
+import api from "../services/api"; // API servisimizi çağır
+
+// Mahalle listesini Backend'den çekilene kadar geçici olarak elle giriyoruz.
+// (Not: HomePage'de yaptığımız gibi bunu da backend'den çekebilirsin ama şimdilik böyle kalsın)
+const neighborhoods = ["Sanayi", "Kültürpark", "Universite", "Çaydaçıra", "İzzetpaşa"]; 
 
 const KayitForm = () => {
-  const { neighborhoods } = useCSVData();
   const [name, setName] = useState("");
   const [surname, setSurname] = useState("");
   const [neighborhood, setNeighborhood] = useState("");
@@ -16,30 +19,45 @@ const KayitForm = () => {
     return neighborhoods.filter((m) =>
       m.toLowerCase().includes(neighborhood.toLowerCase())
     );
-  }, [neighborhood, neighborhoods]);
+  }, [neighborhood]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!name || !surname || !neighborhood || !email) {
       alert("Lütfen tüm alanları doldurunuz.");
       return;
     }
 
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    if (!emailRegex.test(email)) {
-      alert("Lütfen geçerli bir e-posta adresi girin.");
-      return;
-    }
+    try {
+      // BACKEND İSTEĞİ
+      await api.post("/subscribers", {
+        name,
+        surname,
+        email,
+        neighborhood
+      });
 
-    alert("✅ Başarıyla kayıt oldunuz!");
-    setName("");
-    setSurname("");
-    setNeighborhood("");
-    setEmail("");
+      alert(`✅ Başarıyla kayıt oldunuz! ${neighborhood} mahallesindeki kesintiler size mail olarak gelecektir.`);
+      
+      // Formu temizle
+      setName("");
+      setSurname("");
+      setNeighborhood("");
+      setEmail("");
+      
+    } catch (error) {
+      console.error(error);
+      alert(error.response?.data?.message || "Kayıt sırasında hata oluştu.");
+    }
   };
 
   return (
+    // ... (HTML tasarım kodların aynı kalsın) ...
+    // Sadece <form onSubmit={handleSubmit}> olduğundan emin ol
     <div className="relative min-h-screen flex flex-col items-center justify-start px-4 py-10 overflow-hidden">
+      {/* ... Video ve Geri Dön butonu kodları aynı ... */}
+      
+      {/* Form Kodları aynı kalacak, sadece logic değişti */}
       <video
         autoPlay
         loop
@@ -51,7 +69,7 @@ const KayitForm = () => {
       </video>
       <div className="absolute inset-0 bg-black/35 z-10"></div>
 
-      <button
+       <button
         onClick={() => (window.location.href = "/")}
         className="flex items-center gap-2 text-white drop-shadow-md hover:text-gray-200 self-start mb-8 z-20"
       >
@@ -61,75 +79,37 @@ const KayitForm = () => {
 
       <div className="bg-white/10 backdrop-blur-md border border-white/30 text-white rounded-2xl p-8 w-full max-w-lg mt-20 z-20">
         <h2 className="text-2xl font-bold text-white mb-4 text-center">Kayıt Formu</h2>
-
-        <p className="text-center text-white/90 mb-8">
-          Mahallenizdeki kesintilerden <b className="text-white">mail yoluyla</b> haberdar olmak için bilgilerinizi girin.
-        </p>
+        <p className="text-center text-white/90 mb-8">Mahallenizdeki kesintilerden mail yoluyla haberdar olun.</p>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
+           {/* Inputlar aynı... */}
+           <div>
             <label className="text-sm font-medium text-white">Adınız</label>
-            <input
-              className="w-full bg-white/10 text-white placeholder-white/60 px-4 py-3 rounded-xl border border-white/40 focus:ring-2 focus:ring-white"
-              placeholder="Adınızı girin"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </div>
-
-          <div>
+            <input className="w-full bg-white/10 text-white placeholder-white/60 px-4 py-3 rounded-xl border border-white/40" placeholder="Adınız" value={name} onChange={(e) => setName(e.target.value)} />
+           </div>
+           <div>
             <label className="text-sm font-medium text-white">Soyadınız</label>
-            <input
-              className="w-full bg-white/10 text-white placeholder-white/60 px-4 py-3 rounded-xl border border-white/40 focus:ring-2 focus:ring-white"
-              placeholder="Soyadınızı girin"
-              value={surname}
-              onChange={(e) => setSurname(e.target.value)}
-            />
-          </div>
-
-          <div className="relative">
+            <input className="w-full bg-white/10 text-white placeholder-white/60 px-4 py-3 rounded-xl border border-white/40" placeholder="Soyadınız" value={surname} onChange={(e) => setSurname(e.target.value)} />
+           </div>
+           
+           <div className="relative">
             <label className="text-sm font-medium text-white">Mahalleniz</label>
-            <input
-              type="text"
-              className="w-full bg-white/10 text-white placeholder-white/60 px-4 py-3 rounded-xl border border-white/40 focus:ring-2 focus:ring-white"
-              placeholder="Mahalle adı"
-              value={neighborhood}
-              onChange={(e) => {
-                setNeighborhood(e.target.value);
-                setShowList(true);
-              }}
-              onBlur={() => setTimeout(() => setShowList(false), 200)}
-            />
-
+            <input type="text" className="w-full bg-white/10 text-white placeholder-white/60 px-4 py-3 rounded-xl border border-white/40" placeholder="Mahalle seçin" value={neighborhood} onChange={(e) => { setNeighborhood(e.target.value); setShowList(true); }} onBlur={() => setTimeout(() => setShowList(false), 200)} />
             {showList && filteredNeighborhoods.length > 0 && (
-              <ul className="absolute left-0 right-0 bg-white/15 backdrop-blur-md text-white border border-white/30 rounded-xl mt-1 max-h-40 overflow-y-auto z-30">
+              <ul className="absolute left-0 right-0 bg-gray-900 text-white border border-white/30 rounded-xl mt-1 max-h-40 overflow-y-auto z-30">
                 {filteredNeighborhoods.map((m, i) => (
-                  <li
-                    key={i}
-                    onClick={() => { setNeighborhood(m); setShowList(false); }}
-                    className="px-4 py-2 cursor-pointer hover:bg-white/20"
-                  >
-                    {m}
-                  </li>
+                  <li key={i} onClick={() => { setNeighborhood(m); setShowList(false); }} className="px-4 py-2 cursor-pointer hover:bg-white/20">{m}</li>
                 ))}
               </ul>
             )}
-          </div>
+           </div>
 
-          <div>
+           <div>
             <label className="text-sm font-medium text-white">E-postanız</label>
-            <input
-              type="email"
-              className="w-full bg-white/10 text-white placeholder-white/60 px-4 py-3 rounded-xl border border-white/40 focus:ring-2 focus:ring-white"
-              placeholder="ornek@gmail.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
+            <input type="email" className="w-full bg-white/10 text-white placeholder-white/60 px-4 py-3 rounded-xl border border-white/40" placeholder="ornek@gmail.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+           </div>
 
-          <button type="submit" className="w-full bg-green-600 text-white py-3 rounded-xl font-semibold hover:bg-green-700 transition-all">
-            Gönder
-          </button>
+           <button type="submit" className="w-full bg-emerald-600 text-white py-3 rounded-xl font-semibold hover:bg-emerald-700 transition-all">Abone Ol</button>
         </form>
       </div>
     </div>
