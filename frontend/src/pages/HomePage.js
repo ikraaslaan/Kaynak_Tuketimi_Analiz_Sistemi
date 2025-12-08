@@ -1,31 +1,63 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { Search, MapPin, Database, TrendingUp, Zap, Droplets, Flame, Clock } from "lucide-react";
+import { Search, MapPin, Database, TrendingUp, Zap, Droplets, Flame, Clock, BrainCircuit } from "lucide-react"; // BrainCircuit eklendi
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { useConsumptionAPI } from "../hooks/useConsumptionAPI";
 import bgVideo from "../assets/background.mp4";
-
-const periodMap = {
-  all: "all",
-  last_week: "week",
-  last_month: "month",
-};
+import api from "../services/api";
 
 const HomePage = () => {
-  const { neighborhoods, loading, error, getNeighborhoodAverages } = useConsumptionAPI();
+  const [allData, setAllData] = useState([]);
+  const [neighborhoodNames, setNeighborhoodNames] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const [selectedNeighborhood, setSelectedNeighborhood] = useState(null); // { name, electricity, water, gas }
+  const [selectedNeighborhood, setSelectedNeighborhood] = useState(null);
   const [currentNeighborhoodName, setCurrentNeighborhoodName] = useState(null);
-
   const [searchQuery, setSearchQuery] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [filterPeriod, setFilterPeriod] = useState("all");
+  
+  // TAHMİN STATE'İ
+  const [prediction, setPrediction] = useState(null);
+  const [predLoading, setPredLoading] = useState(false);
 
   const searchContainerRef = useRef(null);
 
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get("/stats/dashboard");
+        const data = response.data.data;
+        setAllData(data);
+        setNeighborhoodNames(data.map(item => item.mahalle));
+      } catch (err) {
+        console.error("Veri hatası:", err);
+        setError("Veriler sunucudan çekilemedi.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchInitialData();
+  }, []);
+
+  // TAHMİN FONKSİYONU (YENİ EKLENDİ)
+  const handleGetPrediction = async () => {
+    if (!currentNeighborhoodName) return;
+    try {
+      setPredLoading(true);
+      const res = await api.get(`/predictions?mahalle=${currentNeighborhoodName}`);
+      setPrediction(res.data.data);
+    } catch (err) {
+      alert("Tahmin oluşturulurken hata oluştu.");
+    } finally {
+      setPredLoading(false);
+    }
+  };
+
   const searchNeighborhoods = useCallback(
-    (query) => neighborhoods.filter((n) => n.toLowerCase().includes(query.toLowerCase())),
-    [neighborhoods]
+    (query) => neighborhoodNames.filter((n) => n.toLowerCase().includes(query.toLowerCase())),
+    [neighborhoodNames]
   );
 
   const filteredNeighborhoods = useMemo(() => {
@@ -44,60 +76,48 @@ const HomePage = () => {
   }, []);
 
   const hydrateSelection = useCallback(
-  async (neighborhoodName, uiPeriod) => {
-    if (!neighborhoodName) return;
+    async (neighborhoodName) => {
+      if (!neighborhoodName) return;
+      
+      // Yeni mahalle seçilince eski tahmini temizle
+      setPrediction(null);
 
-    // ✅ UI butonları → API parametre eşleştirme
-    const apiPeriod = uiPeriod || "all";
+      const foundData = allData.find(d => d.mahalle === neighborhoodName);
 
-    const averages = await getNeighborhoodAverages(neighborhoodName, apiPeriod);
+      if (foundData) {
+        const payload = {
+          name: foundData.mahalle,
+          electricity: foundData.elektrik.ortalama,
+          water: foundData.su.ortalama,
+          gas: foundData.dogalgaz.ortalama,
+        };
+        setSelectedNeighborhood(payload);
+        setCurrentNeighborhoodName(payload.name);
+        setSearchQuery(payload.name);
+        localStorage.setItem("lastSelectedNeighborhoodName", payload.name);
+      } else {
+        setSelectedNeighborhood({
+          name: neighborhoodName,
+          electricity: 0,
+          water: 0,
+          gas: 0,
+        });
+      }
+      setShowDropdown(false);
+      setHighlightedIndex(-1);
+    },
+    [allData]
+  );
 
-    // ✅ Backend → Frontend veri alanları eşleştirildi
-    if (averages) {
-      const payload = {
-        name: averages.Mahalle ?? neighborhoodName,
-        electricity: Number(averages.Ortalama_Elektrik_Tuketim ?? 0),
-        water: Number(averages.Ortalama_Su_Tuketim ?? 0),
-        gas: Number(averages.Ortalama_Dogalgaz_Tuketim ?? 0),
-      };
-
-      console.log("✅ Backend Verisi:", averages);
-      console.log("✅ Frontend’e Aktarılan:", payload);
-
-      setSelectedNeighborhood(payload);
-      setCurrentNeighborhoodName(payload.name);
-      setSearchQuery(payload.name);
-      localStorage.setItem("lastSelectedNeighborhoodName", payload.name);
-    } else {
-      // ❗ Veri yoksa boş düşmeyi engelle
-      setSelectedNeighborhood({
-        name: neighborhoodName,
-        electricity: 0,
-        water: 0,
-        gas: 0,
-      });
-      setCurrentNeighborhoodName(neighborhoodName);
-      setSearchQuery(neighborhoodName);
-      localStorage.setItem("lastSelectedNeighborhoodName", neighborhoodName);
-    }
-
-    setShowDropdown(false);
-    setHighlightedIndex(-1);
-  },
-  [getNeighborhoodAverages]
-);
-
-// Mahalle seçildiğinde hydrateSelection çalıştır
-const handleSelectNeighborhood = useCallback(
-  async (neighborhoodName) => {
-    await hydrateSelection(neighborhoodName, filterPeriod);
-  },
-  [hydrateSelection, filterPeriod]
-);
+  const handleSelectNeighborhood = useCallback(
+    (neighborhoodName) => {
+      hydrateSelection(neighborhoodName);
+    },
+    [hydrateSelection]
+  );
 
   const handleKeyDown = (e) => {
     if (!showDropdown || filteredNeighborhoods.length === 0) return;
-
     if (e.key === "ArrowDown") {
       e.preventDefault();
       setHighlightedIndex((p) => (p < filteredNeighborhoods.length - 1 ? p + 1 : p));
@@ -107,9 +127,7 @@ const handleSelectNeighborhood = useCallback(
     } else if (e.key === "Enter" && highlightedIndex >= 0) {
       e.preventDefault();
       handleSelectNeighborhood(filteredNeighborhoods[highlightedIndex]);
-    } else if (e.key === "Escape") {
-      setShowDropdown(false);
-    }
+    } else if (e.key === "Escape") setShowDropdown(false);
   };
 
   const handleSearchChange = (e) => {
@@ -118,38 +136,24 @@ const handleSelectNeighborhood = useCallback(
     setHighlightedIndex(-1);
   };
 
-  // İlk açılış: Kayıtlı mahalle → yoksa "Çayda Çıra" → o da yoksa ilk mahalle
   useEffect(() => {
-  if (!loading && neighborhoods.length > 0 && !selectedNeighborhood) {
+    if (!loading && neighborhoodNames.length > 0 && !selectedNeighborhood) {
+      const savedName = localStorage.getItem("lastSelectedNeighborhoodName");
+      let toPick = neighborhoodNames[0];
+      if (savedName && neighborhoodNames.includes(savedName)) {
+        toPick = savedName;
+      } else if (neighborhoodNames.includes("Çaydaçıra")) {
+        toPick = "Çaydaçıra";
+      }
+      handleSelectNeighborhood(toPick);
+    }
+  }, [loading, neighborhoodNames, selectedNeighborhood, handleSelectNeighborhood]);
 
-    const savedName = localStorage.getItem("lastSelectedNeighborhoodName");
-
-    const fallbackName = neighborhoods.includes("Çaydaçıra")
-      ? "Çaydaçıra"
-      : neighborhoods[0]; // ilk mahalle
-
-    const toPick =
-      savedName && neighborhoods.includes(savedName)
-        ? savedName
-        : fallbackName;
-
-    handleSelectNeighborhood(toPick);
-  }
-}, [loading, neighborhoods, selectedNeighborhood, handleSelectNeighborhood]);
-
-
-
-  // Period değişince mevcut mahalle için veriyi tazele
-  useEffect(() => {
-    if (!currentNeighborhoodName) return;
-    hydrateSelection(currentNeighborhoodName, filterPeriod);
-  }, [filterPeriod, currentNeighborhoodName, hydrateSelection]);
-
-  const stats = [
-    { icon: MapPin, label: "Toplam Mahalle", value: neighborhoods.length > 0 ? neighborhoods.length.toString() : "0", color: "emerald" },
-    { icon: Database, label: "Aktif Veri Kaynakları", value: "8", color: "purple" },
-    { icon: TrendingUp, label: "Toplam Tüketim", value: "4.7M", color: "orange" },
-    { icon: Clock, label: "Son Güncelleme", value: "2dk önce", color: "rose" },
+  const statsDisplay = [
+    { icon: MapPin, label: "Toplam Mahalle", value: neighborhoodNames.length.toString(), color: "emerald" },
+    { icon: Database, label: "Veri Kaydı", value: "85K+", color: "purple" },
+    { icon: TrendingUp, label: "Anlık İzleme", value: "Aktif", color: "orange" },
+    { icon: Clock, label: "Son Güncelleme", value: "Şimdi", color: "rose" },
   ];
 
   const getColorClasses = (color) => {
@@ -162,159 +166,133 @@ const handleSelectNeighborhood = useCallback(
     return colors[color] || colors.emerald;
   };
 
-  if (loading) {
-    return (
-      <div className="pt-20 px-4 text-center text-white">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mx-auto mb-4"></div>
-        Veriler yükleniyor...
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="pt-20 px-4 text-center text-red-500">
-        Hata: {error}
-      </div>
-    );
-  }
+  if (loading) return <div className="text-white text-center pt-20">Yükleniyor...</div>;
+  if (error) return <div className="text-red-500 text-center pt-20">{error}</div>;
 
   return (
     <div className="relative min-h-screen overflow-hidden">
       <video className="absolute inset-0 w-full h-full object-cover" src={bgVideo} autoPlay loop muted playsInline />
-      <div className="absolute inset-0 bg-black/35"></div>
+      <div className="absolute inset-0 bg-black/40"></div>
 
       <div className="relative z-10 pt-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto pb-16">
         <div className="animate-fade-in-up">
-          {/* ---- HERO ---- */}
           <div className="text-center mb-16 mt-8">
-            <h1 className="text-5xl font-extrabold text-white drop-shadow-[0_0_22px_rgba(0,0,0,0.85)] leading-tight mb-4">
-              Kentsel Tüketim Verilerini Keşfedin
-            </h1>
-            <p className="text-xl text-gray-200 drop-shadow-[0_0_18px_rgba(0,0,0,0.65)] max-w-2xl mx-auto mb-8">
-              Mahalle bazında elektrik, su ve doğalgaz tüketimlerini anlık olarak takip edin.
-            </p>
+            <h1 className="text-5xl font-extrabold text-white drop-shadow-lg leading-tight mb-4">Şehir Tüketim Analizi</h1>
+            <p className="text-xl text-gray-200 drop-shadow-md max-w-2xl mx-auto mb-8">Mahalle bazında gerçek zamanlı veriler.</p>
             <button
-              onClick={() =>
-                searchContainerRef.current &&
-                window.scrollTo({ top: searchContainerRef.current.offsetTop - 100, behavior: "smooth" })
-              }
-              className="inline-flex items-center px-8 py-4 text-base font-medium rounded-full shadow-lg text-white bg-emerald-500 hover:bg-emerald-600 transition-transform duration-200 hover:scale-105"
+              onClick={() => searchContainerRef.current && window.scrollTo({ top: searchContainerRef.current.offsetTop - 100, behavior: "smooth" })}
+              className="inline-flex items-center px-8 py-4 text-base font-medium rounded-full shadow-lg text-white bg-emerald-600 hover:bg-emerald-700 transition-all hover:scale-105"
             >
-              <Search className="w-5 h-5 mr-3" />
-              Hemen Başla
+              <Search className="w-5 h-5 mr-3" /> Mahalle Ara
             </button>
           </div>
 
-          {/* ---- ÜST İSTATİSTİK KARTLARI ---- */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
-            {stats.map((stat, index) => {
+            {statsDisplay.map((stat, index) => {
               const Icon = stat.icon;
               return (
-                <div
-                  key={index}
-                  className="bg-white/20 backdrop-blur-md
-                     rounded-3xl p-7 shadow-lg hover:shadow-emerald-300/40 transition-all duration-300 border border-white/30 transform hover:-translate-y-1"
-                >
-                  <div className={`w-14 h-14 rounded-full flex items-center justify-center mb-5 border-2 ${getColorClasses(stat.color)}`}>
-                    <Icon className="w-7 h-7" />
-                  </div>
-                  <h3 className="text-md font-medium text-gray-700 mb-2">{stat.label}</h3>
-                  <p className="text-3xl font-bold text-gray-800">{stat.value}</p>
+                <div key={index} className="bg-white/20 backdrop-blur-md rounded-3xl p-7 shadow-lg border border-white/30 hover:-translate-y-1 transition-transform">
+                  <div className={`w-14 h-14 rounded-full flex items-center justify-center mb-5 border-2 ${getColorClasses(stat.color)}`}><Icon className="w-7 h-7" /></div>
+                  <h3 className="text-md font-medium text-gray-200 mb-1">{stat.label}</h3>
+                  <p className="text-3xl font-bold text-white">{stat.value}</p>
                 </div>
               );
             })}
           </div>
 
-          {/* ---- MAHALLE ARAMA + FİLTRE ---- */}
-          <div id="search-section" ref={searchContainerRef} className="bbg-white/20 backdrop-blur-md
-                 rounded-3xl p-7 shadow-lg border border-white/30">
-            <div className="flex flex-wrap justify-between items-center gap-4 mb-8">
-              <h2 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
-                <Search className="w-8 h-8 text-emerald-500" />
-                Mahalle Ara
-              </h2>
-
-              <div className="flex gap-2 bg-black/5 p-1 rounded-xl border border-white/30">
-                {["all", "week", "month"].map((period) => (
-                     <button
-                        key={period}
-                        onClick={() => setFilterPeriod(period)}
-                        className={`px-5 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
-                          filterPeriod === period ? "bg-white text-emerald-700 shadow-md" : "text-gray-600 hover:bg-white/50"
-                        }`}
-                    >
-                       {period === "all" && "Tüm Zamanlar"}
-                        {period === "week" && "Son Hafta"}
-                        {period === "month" && "Son Ay (4 Hafta)"}
-                      </button>
-                ))}
-                  </div>
-
-            </div>
-
-            <div className="relative">
-              <div className="relative">
-                <Search className="absolute left-5 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={handleSearchChange}
-                  onFocus={() => setShowDropdown(true)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Bir mahalle ismi yazın..."
-                  className="w-full pl-14 pr-5 py-4 border border-white/40 rounded-2xl bg-white/20 backdrop-blur-md text-gray-900 placeholder:text-gray-700 focus:outline-none"
-                />
-              </div>
-
+          <div id="search-section" ref={searchContainerRef} className="bg-white/15 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-white/20">
+            <h2 className="text-3xl font-bold text-white mb-8 flex items-center gap-3"><Search className="w-8 h-8 text-emerald-400" /> Detaylı Analiz</h2>
+            
+            <div className="relative mb-8">
+              <Search className="absolute left-5 top-1/2 transform -translate-y-1/2 w-6 h-6 text-emerald-100" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={handleSearchChange}
+                onFocus={() => setShowDropdown(true)}
+                onKeyDown={handleKeyDown}
+                placeholder="Mahalle adı girin..."
+                className="w-full pl-16 pr-5 py-5 text-lg border border-white/30 rounded-2xl bg-white/10 text-white placeholder:text-gray-300 focus:outline-none focus:bg-white/20 focus:border-emerald-400 transition-all"
+              />
               {showDropdown && filteredNeighborhoods.length > 0 && (
-                <div className="absolute w-full mt-3 bg-white/30 backdrop-blur-xl rounded-2xl shadow-lg border border-white/40 max-h-64 overflow-y-auto z-20">
+                <div className="absolute w-full mt-2 bg-gray-900/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/10 max-h-64 overflow-y-auto z-50">
                   {filteredNeighborhoods.map((n, index) => (
-                    <button
-                      key={n}
-                      onClick={() => handleSelectNeighborhood(n)}
-                      className={`w-full text-left px-5 py-4 flex items-center gap-4 hover:bg-white/40 transition ${
-                        index === highlightedIndex ? "bg-white/60" : ""
-                      }`}
-                    >
-                      <MapPin className="w-5 h-5 text-emerald-500" />
-                      <span className="font-medium text-gray-700 text-lg">{n}</span>
+                    <button key={n} onClick={() => handleSelectNeighborhood(n)} className={`w-full text-left px-6 py-4 flex items-center gap-3 hover:bg-emerald-900/50 transition border-b border-white/5 last:border-0 ${index === highlightedIndex ? "bg-emerald-900/80" : ""}`}>
+                      <MapPin className="w-5 h-5 text-emerald-400" /><span className="font-medium text-gray-200 text-lg">{n}</span>
                     </button>
                   ))}
                 </div>
               )}
             </div>
 
-            {/* SEÇİLİ MAHALLE VERİLERİ */}
             {selectedNeighborhood && (
-              <div className="mt-12 bg-white/20 backdrop-blur-md
-                     rounded-3xl p-8 border border-white/30 shadow-lg">
-                <h3 className="text-3xl font-bold text-gray-800 mb-7">
-                  <span className="text-emerald-700">{selectedNeighborhood.name}</span> - Ortalama Tüketim Verileri
-                </h3>
+              <div className="animate-fade-in">
+                <div className="flex items-center gap-4 mb-8 pb-4 border-b border-white/10">
+                   <div className="p-3 bg-emerald-500/20 rounded-xl"><MapPin className="w-8 h-8 text-emerald-400" /></div>
+                   <div><h3 className="text-4xl font-bold text-white">{selectedNeighborhood.name}</h3><p className="text-emerald-200">Güncel ortalama tüketim verileri</p></div>
+                </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                  <DataCard icon={Zap} label="Ortalama Elektrik" value={selectedNeighborhood.electricity} unit="kWh" colorBg="bg-yellow-100" colorIcon="text-yellow-600" />
-                  <DataCard icon={Droplets} label="Ortalama Su" value={selectedNeighborhood.water} unit="m³" colorBg="bg-blue-100" colorIcon="text-blue-600" />
-                  <DataCard icon={Flame} label="Ortalama Doğalgaz" value={selectedNeighborhood.gas} unit="m³" colorBg="bg-orange-100" colorIcon="text-orange-600" />
+                  <DataCard icon={Zap} label="Ortalama Elektrik" value={selectedNeighborhood.electricity} unit="kWh" color="yellow" />
+                  <DataCard icon={Droplets} label="Ortalama Su" value={selectedNeighborhood.water} unit="m³" color="blue" />
+                  <DataCard icon={Flame} label="Ortalama Doğalgaz" value={selectedNeighborhood.gas} unit="m³" color="orange" />
                 </div>
 
-                <ConsumptionChart selectedNeighborhood={selectedNeighborhood} />
-
-                <div className="mt-8 pt-7 border-t border-emerald-300">
-                  <p className="text-md text-gray-600">
-                    Bu veriler, {selectedNeighborhood.name} mahallesinin genel tüketim eğilimlerini göstermektedir.
-                  </p>
+                <div className="bg-white rounded-3xl p-6 shadow-xl mb-8">
+                  <h4 className="text-lg font-bold text-gray-800 mb-6">Tüketim Dağılımı</h4>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <AreaChart data={[{ name: "Elektrik", value: Number(selectedNeighborhood.electricity) }, { name: "Su", value: Number(selectedNeighborhood.water) }, { name: "Doğalgaz", value: Number(selectedNeighborhood.gas) }]} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                      <defs><linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/><stop offset="95%" stopColor="#10b981" stopOpacity={0}/></linearGradient></defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#6b7280'}} />
+                      <YAxis axisLine={false} tickLine={false} tick={{fill: '#6b7280'}} />
+                      <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'}} />
+                      <Area type="monotone" dataKey="value" stroke="#059669" fillOpacity={1} fill="url(#colorValue)" strokeWidth={3} />
+                    </AreaChart>
+                  </ResponsiveContainer>
                 </div>
+
+                {/* --- TAHMİN (PREDICTION) ALANI --- */}
+                <div className="bg-gradient-to-r from-indigo-900 to-purple-900 rounded-3xl p-8 border border-white/20 shadow-2xl">
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                        <div>
+                            <h4 className="text-2xl font-bold text-white flex items-center gap-3">
+                                <BrainCircuit className="text-purple-400" /> Gelecek Ay Öngörüsü
+                            </h4>
+                            <p className="text-purple-200 mt-2">Yapay zeka algoritmamız ile gelecek 30 günün tahminlerini görün.</p>
+                        </div>
+                        <button 
+                            onClick={handleGetPrediction} 
+                            disabled={predLoading}
+                            className="bg-white text-purple-900 px-6 py-3 rounded-xl font-bold hover:bg-purple-100 transition shadow-lg disabled:opacity-50"
+                        >
+                            {predLoading ? "Hesaplanıyor..." : "Tahmini Göster"}
+                        </button>
+                    </div>
+
+                    {prediction && (
+                        <div className="mt-8 bg-white/10 p-6 rounded-2xl border border-white/10 animate-fade-in">
+                            <p className="text-xl text-center text-white font-semibold mb-4">{prediction.mesaj}</p>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="text-center p-4 bg-black/20 rounded-xl">
+                                    <p className="text-sm text-yellow-300">Elektrik Tahmini</p>
+                                    <p className="text-2xl text-white font-bold">{prediction.elektrik_tahmini} kWh</p>
+                                </div>
+                                <div className="text-center p-4 bg-black/20 rounded-xl">
+                                    <p className="text-sm text-blue-300">Su Tahmini</p>
+                                    <p className="text-2xl text-white font-bold">{prediction.su_tahmini} m³</p>
+                                </div>
+                                <div className="text-center p-4 bg-black/20 rounded-xl">
+                                    <p className="text-sm text-orange-300">Doğalgaz Tahmini</p>
+                                    <p className="text-2xl text-white font-bold">{prediction.dogalgaz_tahmini} m³</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
               </div>
             )}
-          </div>
-
-          {/* ---- EN ALT KARTLAR ---- */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-12">
-            <FooterCard icon={Database} value="156K" text="Veritabanında" />
-            <FooterCard icon={TrendingUp} value="100%" text="Sistem Uptime" />
-            <FooterCard icon={Clock} value="5dk" text="Önce Güncellendi" />
           </div>
         </div>
       </div>
@@ -322,50 +300,8 @@ const handleSelectNeighborhood = useCallback(
   );
 };
 
-/* --- ALT BİLEŞENLER --- */
-
-const DataCard = ({ icon: Icon, label, value, unit, colorBg, colorIcon }) => (
-  <div className="bg-white/20 backdrop-blur-md
-         rounded-2xl p-7 flex items-center gap-5 shadow-lg border border-white/30">
-    <div className={`w-16 h-16 ${colorBg} rounded-full flex items-center justify-center shadow-inner`}>
-      <Icon className={`w-8 h-8 ${colorIcon}`} />
-    </div>
-    <div>
-      <p className="text-md font-medium text-gray-700 mb-1">{label}</p>
-      <p className="text-3xl font-bold text-gray-800">
-        {(Number(value) || 0).toFixed(2)} <span className="text-xl font-normal text-gray-600">{unit}</span>
-      </p>
-    </div>
-  </div>
-);
-
-const ConsumptionChart = ({ selectedNeighborhood }) => (
-  <div className="bg-white rounded-3xl p-7 shadow-md border border-emerald-300 mt-8">
-    <h4 className="text-lg font-semibold text-gray-700 mb-5">Tüketim Özeti Grafiği</h4>
-    <ResponsiveContainer width="100%" height={250}>
-      <AreaChart
-        data={[
-          { name: "Elektrik", value: Number(selectedNeighborhood.electricity) || 0 },
-          { name: "Su", value: Number(selectedNeighborhood.water) || 0 },
-          { name: "Doğalgaz", value: Number(selectedNeighborhood.gas) || 0 },
-        ]}
-      >
-        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-        <XAxis dataKey="name" stroke="#6b7280" />
-        <YAxis stroke="#6b7280" />
-        <Tooltip />
-        <Area type="monotone" dataKey="value" stroke="#059669" fill="#a7f3d0" strokeWidth={3} />
-      </AreaChart>
-    </ResponsiveContainer>
-  </div>
-);
-
-const FooterCard = ({ icon: Icon, value, text }) => (
-  <div className="bg-white/20 backdrop-blur-md rounded-3xl p-7 text-center shadow-lg border border-white/30">
-    <Icon className="w-8 h-8 text-emerald-600 mx-auto mb-4" />
-    <p className="text-3xl font-bold text-gray-900">{value}</p>
-    <p className="text-sm text-gray-600">{text}</p>
-  </div>
-);
-
+const DataCard = ({ icon: Icon, label, value, unit, color }) => {
+   const colors = { yellow: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30", blue: "bg-blue-500/20 text-blue-400 border-blue-500/30", orange: "bg-orange-500/20 text-orange-400 border-orange-500/30" };
+   return (<div className={`backdrop-blur-md rounded-2xl p-6 flex items-center gap-5 border ${colors[color]} shadow-lg transition-transform hover:scale-105`}><div className={`p-4 rounded-full bg-black/20`}><Icon className="w-8 h-8" /></div><div><p className="text-sm font-medium text-white/70 mb-1">{label}</p><p className="text-2xl font-bold text-white">{Math.round(Number(value)).toLocaleString()} <span className="text-base font-normal text-white/50">{unit}</span></p></div></div>);
+};
 export default HomePage;
