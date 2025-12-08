@@ -29,12 +29,19 @@ const Navbar = ({ activeTab, setActiveTab, onLogout, isAdminAuthed }) => {
       <div className="w-full px-6 sm:px-8 lg:px-12">
         <div className="flex items-center h-20">
           {/* Sol Logo + Başlık */}
-          <div className="flex items-center gap-3 select-none">
-            <img src={icon} alt="Logo" className="h-11 w-11 rounded-lg object-cover shadow-md" />
-            <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-wide drop-shadow-[0_0_12px_rgba(0,0,0,0.65)] whitespace-nowrap">
-              Kentsel <span className="text-emerald-400">Tüketim</span> Analizi Platformu
-            </h1>
-          </div>
+          <div
+            className="flex items-center gap-3 select-none cursor-pointer"
+            onClick={() => setActiveTab("home")}
+          >
+            <img
+              src={icon}
+              alt="Logo"
+              className="h-11 w-11 rounded-lg object-cover shadow-md"
+            />
+        <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-wide drop-shadow-[0_0_12px_rgba(0,0,0,0.65)] whitespace-nowrap">
+          Kentsel <span className="text-emerald-400">Tüketim</span> Analizi Platformu
+       </h1>
+      </div>
 
           {/* Orta boşluk → Menu sağa kayar */}
           <div className="flex-1"></div>

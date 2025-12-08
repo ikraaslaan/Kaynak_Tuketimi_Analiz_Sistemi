@@ -253,7 +253,7 @@ const HomePage = () => {
                 </div>
 
                 {/* --- TAHMİN (PREDICTION) ALANI --- */}
-                <div className="bg-gradient-to-r from-indigo-900 to-purple-900 rounded-3xl p-8 border border-white/20 shadow-2xl">
+                <div className="bg-gradient-to-r from-emerald-700 to-green-800 rounded-3xl p-8 border border-white/20 shadow-2xl">
                     <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                         <div>
                             <h4 className="text-2xl font-bold text-white flex items-center gap-3">

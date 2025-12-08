@@ -62,7 +62,7 @@ const Yonetici = ({ onLogout }) => {
   if (loading) return <div className="text-center mt-20 text-xl font-bold text-emerald-800">Yönetici Paneli Yükleniyor...</div>;
 
   return (
-    <div className="min-h-screen pt-24 px-4 pb-10 max-w-7xl mx-auto">
+    <div className="min-h-screen flex justify-center items-center px-4 pb-10 pt-[100px]">
       <div className="flex justify-between items-center mb-8 bg-white/40 p-6 rounded-2xl backdrop-blur-md border border-white/50 shadow-sm">
         <div><h1 className="text-3xl font-bold text-emerald-900">Yönetici Paneli</h1><p className="text-emerald-700">Sistem durumu ve arıza yönetimi</p></div>
         <button onClick={onLogout} className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-xl transition shadow-md"><LogOut size={20} />Çıkış Yap</button>

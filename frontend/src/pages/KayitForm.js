@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import bgVideo from "../assets/background.mp4"; // video ismini kontrol et
+import bgVideo from "../assets/kayit.mp4"; // video ismini kontrol et
 import { ArrowLeft } from "lucide-react";
 import api from "../services/api"; // API servisimizi çağır
 
