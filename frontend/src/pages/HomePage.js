@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { Search, MapPin, Database, TrendingUp, Zap, Droplets, Flame, Clock, BrainCircuit } from "lucide-react"; // BrainCircuit eklendi
+import { Search, MapPin, Database, TrendingUp, Zap, Droplets, Flame, Clock } from "lucide-react"; 
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import bgVideo from "../assets/background.mp4";
 import api from "../services/api";
@@ -11,16 +11,10 @@ const HomePage = () => {
   const [error, setError] = useState(null);
 
   const [selectedNeighborhood, setSelectedNeighborhood] = useState(null);
-  const [currentNeighborhoodName, setCurrentNeighborhoodName] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
-  const [filterPeriod, setFilterPeriod] = useState("all");
   
-  // TAHMİN STATE'İ
-  const [prediction, setPrediction] = useState(null);
-  const [predLoading, setPredLoading] = useState(false);
-
   const searchContainerRef = useRef(null);
 
   useEffect(() => {
@@ -40,20 +34,6 @@ const HomePage = () => {
     };
     fetchInitialData();
   }, []);
-
-  // TAHMİN FONKSİYONU (YENİ EKLENDİ)
-  const handleGetPrediction = async () => {
-    if (!currentNeighborhoodName) return;
-    try {
-      setPredLoading(true);
-      const res = await api.get(`/predictions?mahalle=${currentNeighborhoodName}`);
-      setPrediction(res.data.data);
-    } catch (err) {
-      alert("Tahmin oluşturulurken hata oluştu.");
-    } finally {
-      setPredLoading(false);
-    }
-  };
 
   const searchNeighborhoods = useCallback(
     (query) => neighborhoodNames.filter((n) => n.toLowerCase().includes(query.toLowerCase())),
@@ -78,12 +58,7 @@ const HomePage = () => {
   const hydrateSelection = useCallback(
     async (neighborhoodName) => {
       if (!neighborhoodName) return;
-      
-      // Yeni mahalle seçilince eski tahmini temizle
-      setPrediction(null);
-
       const foundData = allData.find(d => d.mahalle === neighborhoodName);
-
       if (foundData) {
         const payload = {
           name: foundData.mahalle,
@@ -92,16 +67,10 @@ const HomePage = () => {
           gas: foundData.dogalgaz.ortalama,
         };
         setSelectedNeighborhood(payload);
-        setCurrentNeighborhoodName(payload.name);
         setSearchQuery(payload.name);
-        localStorage.setItem("lastSelectedNeighborhoodName", payload.name);
+        // localStorage.setItem("lastSelectedNeighborhoodName", payload.name); // Hafızaya almayı kapattık ki hep Çaydaçıra gelsin
       } else {
-        setSelectedNeighborhood({
-          name: neighborhoodName,
-          electricity: 0,
-          water: 0,
-          gas: 0,
-        });
+        setSelectedNeighborhood({ name: neighborhoodName, electricity: 0, water: 0, gas: 0 });
       }
       setShowDropdown(false);
       setHighlightedIndex(-1);
@@ -109,12 +78,7 @@ const HomePage = () => {
     [allData]
   );
 
-  const handleSelectNeighborhood = useCallback(
-    (neighborhoodName) => {
-      hydrateSelection(neighborhoodName);
-    },
-    [hydrateSelection]
-  );
+  const handleSelectNeighborhood = useCallback((neighborhoodName) => hydrateSelection(neighborhoodName), [hydrateSelection]);
 
   const handleKeyDown = (e) => {
     if (!showDropdown || filteredNeighborhoods.length === 0) return;
@@ -136,16 +100,18 @@ const HomePage = () => {
     setHighlightedIndex(-1);
   };
 
+  // --- İŞTE BURASI DEĞİŞTİ ---
   useEffect(() => {
     if (!loading && neighborhoodNames.length > 0 && !selectedNeighborhood) {
-      const savedName = localStorage.getItem("lastSelectedNeighborhoodName");
-      let toPick = neighborhoodNames[0];
-      if (savedName && neighborhoodNames.includes(savedName)) {
-        toPick = savedName;
-      } else if (neighborhoodNames.includes("Çaydaçıra")) {
-        toPick = "Çaydaçıra";
+      
+      // Öncelik direkt Çaydaçıra'da
+      if (neighborhoodNames.includes("Çaydaçıra")) {
+        handleSelectNeighborhood("Çaydaçıra");
+      } else {
+        // Eğer Çaydaçıra verisi yoksa listenin ilkini seç
+        handleSelectNeighborhood(neighborhoodNames[0]);
       }
-      handleSelectNeighborhood(toPick);
+      
     }
   }, [loading, neighborhoodNames, selectedNeighborhood, handleSelectNeighborhood]);
 
@@ -227,15 +193,21 @@ const HomePage = () => {
 
             {selectedNeighborhood && (
               <div className="animate-fade-in">
-                <div className="flex items-center gap-4 mb-8 pb-4 border-b border-white/10">
-                   <div className="p-3 bg-emerald-500/20 rounded-xl"><MapPin className="w-8 h-8 text-emerald-400" /></div>
-                   <div><h3 className="text-4xl font-bold text-white">{selectedNeighborhood.name}</h3><p className="text-emerald-200">Güncel ortalama tüketim verileri</p></div>
+                
+                <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-8 pb-4 border-b border-white/10">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-emerald-500/20 rounded-xl"><MapPin className="w-8 h-8 text-emerald-400" /></div>
+                      <div>
+                        <h3 className="text-4xl font-bold text-white">{selectedNeighborhood.name}</h3>
+                        <p className="text-emerald-200">Güncel ortalama tüketim verileri</p>
+                      </div>
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                  <DataCard icon={Zap} label="Ortalama Elektrik" value={selectedNeighborhood.electricity} unit="kWh" color="yellow" />
-                  <DataCard icon={Droplets} label="Ortalama Su" value={selectedNeighborhood.water} unit="m³" color="blue" />
-                  <DataCard icon={Flame} label="Ortalama Doğalgaz" value={selectedNeighborhood.gas} unit="m³" color="orange" />
+                  <DataCard icon={Zap} label="Elektrik" value={selectedNeighborhood.electricity} unit="kWh" color="yellow" />
+                  <DataCard icon={Droplets} label="Su" value={selectedNeighborhood.water} unit="m³" color="blue" />
+                  <DataCard icon={Flame} label="Doğalgaz" value={selectedNeighborhood.gas} unit="m³" color="orange" />
                 </div>
 
                 <div className="bg-white rounded-3xl p-6 shadow-xl mb-8">
@@ -252,45 +224,6 @@ const HomePage = () => {
                   </ResponsiveContainer>
                 </div>
 
-                {/* --- TAHMİN (PREDICTION) ALANI --- */}
-                <div className="bg-gradient-to-r from-emerald-700 to-green-800 rounded-3xl p-8 border border-white/20 shadow-2xl">
-                    <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                        <div>
-                            <h4 className="text-2xl font-bold text-white flex items-center gap-3">
-                                <BrainCircuit className="text-purple-400" /> Gelecek Ay Öngörüsü
-                            </h4>
-                            <p className="text-purple-200 mt-2">Yapay zeka algoritmamız ile gelecek 30 günün tahminlerini görün.</p>
-                        </div>
-                        <button 
-                            onClick={handleGetPrediction} 
-                            disabled={predLoading}
-                            className="bg-white text-purple-900 px-6 py-3 rounded-xl font-bold hover:bg-purple-100 transition shadow-lg disabled:opacity-50"
-                        >
-                            {predLoading ? "Hesaplanıyor..." : "Tahmini Göster"}
-                        </button>
-                    </div>
-
-                    {prediction && (
-                        <div className="mt-8 bg-white/10 p-6 rounded-2xl border border-white/10 animate-fade-in">
-                            <p className="text-xl text-center text-white font-semibold mb-4">{prediction.mesaj}</p>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div className="text-center p-4 bg-black/20 rounded-xl">
-                                    <p className="text-sm text-yellow-300">Elektrik Tahmini</p>
-                                    <p className="text-2xl text-white font-bold">{prediction.elektrik_tahmini} kWh</p>
-                                </div>
-                                <div className="text-center p-4 bg-black/20 rounded-xl">
-                                    <p className="text-sm text-blue-300">Su Tahmini</p>
-                                    <p className="text-2xl text-white font-bold">{prediction.su_tahmini} m³</p>
-                                </div>
-                                <div className="text-center p-4 bg-black/20 rounded-xl">
-                                    <p className="text-sm text-orange-300">Doğalgaz Tahmini</p>
-                                    <p className="text-2xl text-white font-bold">{prediction.dogalgaz_tahmini} m³</p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-
               </div>
             )}
           </div>
@@ -304,4 +237,5 @@ const DataCard = ({ icon: Icon, label, value, unit, color }) => {
    const colors = { yellow: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30", blue: "bg-blue-500/20 text-blue-400 border-blue-500/30", orange: "bg-orange-500/20 text-orange-400 border-orange-500/30" };
    return (<div className={`backdrop-blur-md rounded-2xl p-6 flex items-center gap-5 border ${colors[color]} shadow-lg transition-transform hover:scale-105`}><div className={`p-4 rounded-full bg-black/20`}><Icon className="w-8 h-8" /></div><div><p className="text-sm font-medium text-white/70 mb-1">{label}</p><p className="text-2xl font-bold text-white">{Math.round(Number(value)).toLocaleString()} <span className="text-base font-normal text-white/50">{unit}</span></p></div></div>);
 };
+
 export default HomePage;
