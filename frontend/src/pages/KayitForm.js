@@ -2,6 +2,8 @@ import React, { useState, useMemo } from "react";
 import bgVideo from "../assets/background.mp4"; // video ismini kontrol et
 import { ArrowLeft } from "lucide-react";
 import api from "../services/api"; // API servisimizi çağır
+import EmailVerification from "../components/EmailVerification";
+import useSubscriberVerification from "../hooks/useSubscriberVerification";
 
 // Mahalle listesini Backend'den çekilene kadar geçici olarak elle giriyoruz.
 // (Not: HomePage'de yaptığımız gibi bunu da backend'den çekebilirsin ama şimdilik böyle kalsın)
@@ -13,6 +15,9 @@ const KayitForm = () => {
   const [neighborhood, setNeighborhood] = useState("");
   const [email, setEmail] = useState("");
   const [showList, setShowList] = useState(false);
+  const [showVerification, setShowVerification] = useState(false);
+
+  const { initiateVerification, verifyCode, resendCode, isVerifying, error: verificationError } = useSubscriberVerification();
 
   const filteredNeighborhoods = useMemo(() => {
     if (!neighborhood.trim()) return [];
@@ -28,28 +33,72 @@ const KayitForm = () => {
       return;
     }
 
+    // Initiate email verification instead of direct subscription
+    const result = await initiateVerification({
+      name,
+      surname,
+      email,
+      neighborhood
+    });
+
+    if (result.success) {
+      setShowVerification(true);
+    } else {
+      alert(result.error || "Doğrulama başlatılamadı. Lütfen tekrar deneyin.");
+    }
+  };
+
+  // This function is called ONLY after successful email verification
+  const handleVerificationSuccess = async (subscriberData) => {
     try {
-      // BACKEND İSTEĞİ
+      // Original subscriber submission logic - only executed after verification
       await api.post("/subscribers", {
-        name,
-        surname,
-        email,
-        neighborhood
+        name: subscriberData.name,
+        surname: subscriberData.surname,
+        email: subscriberData.email,
+        neighborhood: subscriberData.neighborhood
       });
 
-      alert(`✅ Başarıyla kayıt oldunuz! ${neighborhood} mahallesindeki kesintiler size mail olarak gelecektir.`);
+      alert(`✅ Başarıyla kayıt oldunuz! ${subscriberData.neighborhood} mahallesindeki kesintiler size mail olarak gelecektir.`);
       
       // Formu temizle
       setName("");
       setSurname("");
       setNeighborhood("");
       setEmail("");
+      setShowVerification(false);
       
     } catch (error) {
       console.error(error);
       alert(error.response?.data?.message || "Kayıt sırasında hata oluştu.");
     }
   };
+
+  const handleCancel = () => {
+    setShowVerification(false);
+  };
+
+  const handleResend = async () => {
+    const result = await resendCode(email);
+    if (!result.success) {
+      alert(result.error || "Kod gönderilemedi.");
+    }
+  };
+
+  // Show verification component if verification is in progress
+  if (showVerification) {
+    return (
+      <EmailVerification
+        email={email}
+        onVerificationSuccess={handleVerificationSuccess}
+        onCancel={handleCancel}
+        onResend={handleResend}
+        verifyEndpoint="/verification/subscriber/verify"
+        resendEndpoint="/verification/subscriber/resend"
+        successMessage="E-posta Doğrulandı!"
+      />
+    );
+  }
 
   return (
     // ... (HTML tasarım kodların aynı kalsın) ...
@@ -109,7 +158,19 @@ const KayitForm = () => {
             <input type="email" className="w-full bg-white/10 text-white placeholder-white/60 px-4 py-3 rounded-xl border border-white/40" placeholder="ornek@gmail.com" value={email} onChange={(e) => setEmail(e.target.value)} />
            </div>
 
-           <button type="submit" className="w-full bg-emerald-600 text-white py-3 rounded-xl font-semibold hover:bg-emerald-700 transition-all">Abone Ol</button>
+           {verificationError && (
+             <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-red-400 text-sm">
+               {verificationError}
+             </div>
+           )}
+
+           <button 
+             type="submit" 
+             disabled={isVerifying}
+             className="w-full bg-emerald-600 text-white py-3 rounded-xl font-semibold hover:bg-emerald-700 transition-all disabled:bg-gray-600 disabled:cursor-not-allowed"
+           >
+             {isVerifying ? "Doğrulama kodu gönderiliyor..." : "Abone Ol ve E-posta Doğrula"}
+           </button>
         </form>
       </div>
     </div>
