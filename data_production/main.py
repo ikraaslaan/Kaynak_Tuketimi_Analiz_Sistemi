@@ -10,7 +10,9 @@ sys.stdout.reconfigure(encoding='utf-8')
 import uretim_modelleri as motor
 from config import (
     PROFIL_KONUT_STANDART, PROFIL_SANAYI, 
-    PROFIL_PARK, PROFIL_KAMPUS
+    PROFIL_PARK, PROFIL_KAMPUS,
+    PROFIL_KONUT_GELENEKSEL
+
 )
 
 # --- 2. AYARLAR ---
@@ -20,7 +22,7 @@ zaman_adimi      = pd.Timedelta(minutes=30)
 output_filename  = "tuketim_verisi_tum_mahalleler_detayli.csv"
 
 # --- MONGODB BAĞLANTISI ---
-MONGODB_URI = "MongoDB URL adresinizi buraya ekleyin"
+MONGODB_URI = "Mongodb bağlantı URI'nizi buraya ekleyin"
 DB_NAME = "tuketim_analizi_db"
 
 print("Veritabanına bağlanılıyor...")
@@ -55,6 +57,7 @@ if not mahalle_listesi_db:
 TANIMLI_PROFIL_SABLONLARI = {
     "konut_standart": PROFIL_KONUT_STANDART,
     "sanayi": PROFIL_SANAYI,
+    "konut_geleneksel": PROFIL_KONUT_GELENEKSEL,
     "park": PROFIL_PARK,
     "kampus": PROFIL_KAMPUS
 }
