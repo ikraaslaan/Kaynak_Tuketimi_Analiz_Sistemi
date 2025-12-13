@@ -1,105 +1,108 @@
 import pandas as pd
 import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
 import sys
+
+# UTF-8 ayarı
 sys.stdout.reconfigure(encoding='utf-8')
 
-print("Nihai Karşılaştırmalı Analiz script'i başlatıldı...")
-print("-" * 30)
+print("Nihai İnteraktif Analiz Aracı Başlatılıyor...")
+print("-" * 40)
 
 # --- AYARLAR ---
 CSV_DOSYASI = 'tuketim_verisi_tum_mahalleler_detayli.csv'
-ANALIZ_MAHALLE = 'Çaydaçıra' # Hangi mahalleyi görmek istiyorsunuz?
 
-# --- Karşılaştırılacak 4 Senaryo için Tarihleri Tanımla ---
-# (Bu tarihlerin CSV dosyanızda olduğundan emin olun)
-TARIH_KIS_HICI = '2022-01-10'  # Pazartesi (Kış - Hafta İçi)
-TARIH_KIS_HSONU = '2022-01-15' # Cumartesi (Kış - Hafta Sonu)
-TARIH_YAZ_HICI = '2022-07-11'  # Pazartesi (Yaz - Hafta İçi)
-TARIH_YAZ_HSONU = '2022-07-16' # Cumartesi (Yaz - Hafta Sonu)
+# --- Karşılaştırılacak 4 Senaryo Tarihleri ---
+TARIH_KIS_HICI = '2022-01-10'  # Pazartesi (Kış)
+TARIH_KIS_HSONU = '2022-01-15' # Cumartesi (Kış)
+TARIH_YAZ_HICI = '2022-07-11'  # Pazartesi (Yaz)
+TARIH_YAZ_HSONU = '2022-07-16' # Cumartesi (Yaz)
 
-print(f"Analiz Mahallesi: {ANALIZ_MAHALLE}")
-print(f"1. {TARIH_KIS_HICI} (Kış - Hafta İçi)")
-print(f"2. {TARIH_KIS_HSONU} (Kış - Hafta Sonu)")
-print(f"3. {TARIH_YAZ_HICI} (Yaz - Hafta İçi)")
-print(f"4. {TARIH_YAZ_HSONU} (Yaz - Hafta Sonu)")
-print("-" * 30)
-
-# --- 1. Veriyi Oku ---
-print(f"'{CSV_DOSYASI}' dosyası okunuyor...")
+# --- 1. Veriyi Oku (Sadece bir kez) ---
+print(f"Veri tabanı okunuyor: '{CSV_DOSYASI}' ...")
 try:
     df = pd.read_csv(CSV_DOSYASI, parse_dates=['Tarih'])
+    print("Veri başarıyla yüklendi.")
 except FileNotFoundError:
-    print(f"HATA: '{CSV_DOSYASI}' bulunamadı.")
-    print("Lütfen önce 'main.py' script'ini çalıştırarak veriyi oluşturun.")
-    exit()
+    print(f"HATA: '{CSV_DOSYASI}' bulunamadı. Önce main.py'yi çalıştırın.")
+    sys.exit()
 
-print("Veri başarıyla okundu.")
+# CSV içindeki benzersiz mahalle isimlerini bul
+mevcut_mahalleler = df['Mahalle'].unique()
+mevcut_mahalleler.sort() # Alfabetik sırala
 
-# --- 2. Veriyi Filtrele ---
-df_mahalle = df[df['Mahalle'] == ANALIZ_MAHALLE].copy()
+def grafik_ciz(secilen_mahalle):
+    print(f"\n--> '{secilen_mahalle}' için veriler hazırlanıyor...")
+    
+    # Veriyi Filtrele
+    df_mahalle = df[df['Mahalle'] == secilen_mahalle].copy()
 
-# Tarih objelerini al
-date_kis_hici = pd.to_datetime(TARIH_KIS_HICI).date()
-date_kis_hsonu = pd.to_datetime(TARIH_KIS_HSONU).date()
-date_yaz_hici = pd.to_datetime(TARIH_YAZ_HICI).date()
-date_yaz_hsonu = pd.to_datetime(TARIH_YAZ_HSONU).date()
+    # Tarihleri ayarla
+    tarihler = [TARIH_KIS_HICI, TARIH_KIS_HSONU, TARIH_YAZ_HICI, TARIH_YAZ_HSONU]
+    etiketler = ['Kış - Hafta İçi', 'Kış - Hafta Sonu', 'Yaz - Hafta İçi', 'Yaz - Hafta Sonu']
+    renkler = ['blue', 'deepskyblue', 'red', 'orange']
+    stiller = ['-', '--', '-', '--']
+    
+    dfs = []
+    
+    # 4 Tarih için verileri çek
+    for t in tarihler:
+        d_obj = pd.to_datetime(t).date()
+        temp_df = df_mahalle[df_mahalle['Tarih'].dt.date == d_obj].copy()
+        
+        if temp_df.empty:
+            print(f"UYARI: {t} tarihi için veri bulunamadı!")
+            return # Fonksiyondan çık
+            
+        # Saat ekseni ekle
+        temp_df['Saat'] = temp_df['Tarih'].dt.hour + temp_df['Tarih'].dt.minute / 60.0
+        dfs.append(temp_df)
 
-# 4 DataFrame'i de filtrele
-df_kis_hici = df_mahalle[df_mahalle['Tarih'].dt.date == date_kis_hici].copy()
-df_kis_hsonu = df_mahalle[df_mahalle['Tarih'].dt.date == date_kis_hsonu].copy()
-df_yaz_hici = df_mahalle[df_mahalle['Tarih'].dt.date == date_yaz_hici].copy()
-df_yaz_hsonu = df_mahalle[df_mahalle['Tarih'].dt.date == date_yaz_hsonu].copy()
+    # --- GRAFİK ÇİZİMİ ---
+    fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(16, 12), sharex=True)
+    fig.suptitle(f"{secilen_mahalle} Mahallesi - Mevsimsel ve Günlük Analiz", fontsize=16)
 
-if df_kis_hici.empty or df_kis_hsonu.empty or df_yaz_hici.empty or df_yaz_hsonu.empty:
-    print(f"HATA: Tanımlanan 4 tarihten biri veya birkaçı için veri bulunamadı.")
-    exit()
+    kaynaklar = [
+        ('Elektrik_Tuketim', 'Elektrik (kW)', axes[0]),
+        ('Su_Tuketim', 'Su (m³)', axes[1]),
+        ('Dogalgaz_Tuketim', 'Doğalgaz (m³)', axes[2])
+    ]
 
-# Hepsine 'Saat' eksenini ekle
-for df_gun in [df_kis_hici, df_kis_hsonu, df_yaz_hici, df_yaz_hsonu]:
-    df_gun['Saat'] = df_gun['Tarih'].dt.hour + df_gun['Tarih'].dt.minute / 60.0
+    for col_name, y_label, ax in kaynaklar:
+        for i in range(4):
+            ax.plot(dfs[i]['Saat'], dfs[i][col_name], 
+                    color=renkler[i], linestyle=stiller[i], label=f"{etiketler[i]} ({tarihler[i]})")
+        
+        ax.set_ylabel(y_label)
+        ax.grid(True, alpha=0.5)
+        ax.legend(loc='upper right', fontsize='small')
 
-print("4 senaryo başarıyla filtrelendi.")
+    axes[2].set_xlabel('Günün Saati (00:00 - 24:00)')
+    axes[2].set_xticks(range(0, 25, 2))
 
-# --- 3. Karşılaştırmalı Grafiği Çiz (4 Çizgili) ---
+    plt.tight_layout(rect=[0, 0.03, 1, 0.96])
+    print(f"--> Grafik açıldı. Devam etmek için grafik penceresini kapatın.")
+    plt.show()
 
-fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(16, 15), sharex=True) # Pencereyi büyüt
-fig.suptitle(f"{ANALIZ_MAHALLE} Mahallesi - 4'lü Senaryo Karşılaştırması", fontsize=18)
-
-# --- Grafik 1: Elektrik ---
-axes[0].plot(df_kis_hici['Saat'], df_kis_hici['Elektrik_Tuketim'], color='blue', linestyle='-', label=f'Kış - Hafta İçi ({TARIH_KIS_HICI})')
-axes[0].plot(df_kis_hsonu['Saat'], df_kis_hsonu['Elektrik_Tuketim'], color='deepskyblue', linestyle='--', label=f'Kış - Hafta Sonu ({TARIH_KIS_HSONU})')
-axes[0].plot(df_yaz_hici['Saat'], df_yaz_hici['Elektrik_Tuketim'], color='red', linestyle='-', label=f'Yaz - Hafta İçi ({TARIH_YAZ_HICI})')
-axes[0].plot(df_yaz_hsonu['Saat'], df_yaz_hsonu['Elektrik_Tuketim'], color='orange', linestyle='--', label=f'Yaz - Hafta Sonu ({TARIH_YAZ_HSONU})')
-axes[0].set_title('Elektrik Tüketimi')
-axes[0].set_ylabel('Tüketim (kW)')
-axes[0].grid(True)
-axes[0].legend()
-
-# --- Grafik 2: Su ---
-axes[1].plot(df_kis_hici['Saat'], df_kis_hici['Su_Tuketim'], color='blue', linestyle='-', label=f'Kış - Hafta İçi ({TARIH_KIS_HICI})')
-axes[1].plot(df_kis_hsonu['Saat'], df_kis_hsonu['Su_Tuketim'], color='deepskyblue', linestyle='--', label=f'Kış - Hafta Sonu ({TARIH_KIS_HSONU})')
-axes[1].plot(df_yaz_hici['Saat'], df_yaz_hici['Su_Tuketim'], color='red', linestyle='-', label=f'Yaz - Hafta İçi ({TARIH_YAZ_HICI})')
-axes[1].plot(df_yaz_hsonu['Saat'], df_yaz_hsonu['Su_Tuketim'], color='orange', linestyle='--', label=f'Yaz - Hafta Sonu ({TARIH_YAZ_HSONU})')
-axes[1].set_title('Su Tüketimi')
-axes[1].set_ylabel('Tüketim (m³/saat)')
-axes[1].grid(True)
-axes[1].legend()
-
-# --- Grafik 3: Doğalgaz ---
-axes[2].plot(df_kis_hici['Saat'], df_kis_hici['Dogalgaz_Tuketim'], color='blue', linestyle='-', label=f'Kış - Hafta İçi ({TARIH_KIS_HICI})')
-axes[2].plot(df_kis_hsonu['Saat'], df_kis_hsonu['Dogalgaz_Tuketim'], color='deepskyblue', linestyle='--', label=f'Kış - Hafta Sonu ({TARIH_KIS_HSONU})')
-axes[2].plot(df_yaz_hici['Saat'], df_yaz_hici['Dogalgaz_Tuketim'], color='red', linestyle='-', label=f'Yaz - Hafta İçi ({TARIH_YAZ_HICI})')
-axes[2].plot(df_yaz_hsonu['Saat'], df_yaz_hsonu['Dogalgaz_Tuketim'], color='orange', linestyle='--', label=f'Yaz - Hafta Sonu ({TARIH_YAZ_HSONU})')
-axes[2].set_title('Doğalgaz Tüketimi')
-axes[2].set_ylabel('Tüketim (m³/saat)')
-axes[2].grid(True)
-axes[2].legend()
-
-# X eksenini (Saat) daha okunaklı yap
-axes[2].set_xticks(range(0, 25, 2)) # 0'dan 24'e 2 saatte bir
-plt.xlabel('Günün Saati')
-
-plt.tight_layout(rect=[0, 0.03, 1, 0.96])
-print("Grafik penceresi açılıyor...")
-plt.show()
+# --- ANA DÖNGÜ (MENU) ---
+while True:
+    print("\n" + "="*30)
+    print("MEVCUT MAHALLELER:")
+    for i, mahalle in enumerate(mevcut_mahalleler):
+        print(f" {i+1}. {mahalle}")
+    print("="*30)
+    
+    secim = input("İncelemek istediğiniz mahalle numarası (Çıkış için 'q'): ")
+    
+    if secim.lower() == 'q':
+        print("Programdan çıkılıyor. İyi günler!")
+        break
+    
+    try:
+        index = int(secim) - 1
+        if 0 <= index < len(mevcut_mahalleler):
+            secilen = mevcut_mahalleler[index]
+            grafik_ciz(secilen)
+        else:
+            print("HATA: Geçersiz numara girdiniz.")
+    except ValueError:
+        print("HATA: Lütfen bir sayı girin.")
