@@ -39,5 +39,12 @@
     "base_elektrik": 4000,
     "base_su": 500,
     "base_dogalgaz": 350
+  },
+  {
+    "mahalle_adi": "Aksaray",
+    "profil_tipi": "konut_geleneksel", 
+    "base_elektrik": 1100,   
+    "base_su": 500,          
+    "base_dogalgaz": 150     
   }
 ]
