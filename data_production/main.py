@@ -11,18 +11,18 @@ import uretim_modelleri as motor
 from config import (
     PROFIL_KONUT_STANDART, PROFIL_SANAYI, 
     PROFIL_PARK, PROFIL_KAMPUS,
-    PROFIL_KONUT_GELENEKSEL
+    PROFIL_KONUT_GELENEKSEL,PROFIL_AVM
 
 )
 
 # --- 2. AYARLAR ---
-baslangic_tarihi = pd.to_datetime("2022-01-01 00:00:00")
-bitis_tarihi     = pd.to_datetime("2022-12-31 23:30:00") 
+baslangic_tarihi = pd.to_datetime("2025-01-01 00:00:00")
+bitis_tarihi     = pd.to_datetime("2025-12-31 23:30:00") 
 zaman_adimi      = pd.Timedelta(minutes=30)
 output_filename  = "tuketim_verisi_tum_mahalleler_detayli.csv"
 
 # --- MONGODB BAĞLANTISI ---
-MONGODB_URI = "Mongodb bağlantı URI'nizi buraya ekleyin"
+MONGODB_URI = "mongodb+srv://23frontend23_db_user:PaoDBStFSwY3nPR0@verikaynagi.bueal8j.mongodb.net"
 DB_NAME = "tuketim_analizi_db"
 
 print("Veritabanına bağlanılıyor...")
@@ -39,7 +39,6 @@ print(f"TEMİZLİK: {baslangic_tarihi} ile {bitis_tarihi} arasındaki eski veril
 col_kayitlar.delete_many({
     "Tarih": {"$gte": baslangic_tarihi, "$lte": bitis_tarihi}
 })
-print("Temizlik tamamlandı.")
 
 
 # --- 3. MAHALLELERİ VERİTABANINDAN ÇEK ---
@@ -59,7 +58,8 @@ TANIMLI_PROFIL_SABLONLARI = {
     "sanayi": PROFIL_SANAYI,
     "konut_geleneksel": PROFIL_KONUT_GELENEKSEL,
     "park": PROFIL_PARK,
-    "kampus": PROFIL_KAMPUS
+    "kampus": PROFIL_KAMPUS,
+    "avm": PROFIL_AVM
 }
 
 MAHALLE_PROFILLERI = {}
