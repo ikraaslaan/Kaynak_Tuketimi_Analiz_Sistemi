@@ -12,10 +12,10 @@ print("-" * 40)
 CSV_DOSYASI = 'tuketim_verisi_tum_mahalleler_detayli.csv'
 
 # --- Karşılaştırılacak 4 Senaryo Tarihleri ---
-TARIH_KIS_HICI = '2022-01-10'  # Pazartesi (Kış)
-TARIH_KIS_HSONU = '2022-01-15' # Cumartesi (Kış)
-TARIH_YAZ_HICI = '2022-07-11'  # Pazartesi (Yaz)
-TARIH_YAZ_HSONU = '2022-07-16' # Cumartesi (Yaz)
+TARIH_KIS_HICI = '2025-01-06'  # Pazartesi (Kış)
+TARIH_KIS_HSONU = '2025-01-11' # Cumartesi (Kış)
+TARIH_YAZ_HICI = '2025-07-09'  # Pazartesi (Yaz)
+TARIH_YAZ_HSONU = '2025-07-14' # Cumartesi (Yaz)
 
 # --- 1. Veriyi Oku (Sadece bir kez) ---
 print(f"Veri tabanı okunuyor: '{CSV_DOSYASI}' ...")
