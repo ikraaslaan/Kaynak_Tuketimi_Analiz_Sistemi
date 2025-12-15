@@ -11,7 +11,8 @@ import uretim_modelleri as motor
 from config import (
     PROFIL_KONUT_STANDART, PROFIL_SANAYI, 
     PROFIL_PARK, PROFIL_KAMPUS,
-    PROFIL_KONUT_GELENEKSEL,PROFIL_AVM
+    PROFIL_KONUT_GELENEKSEL,PROFIL_AVM,
+    PROFIL_KARMA
 
 )
 
@@ -59,7 +60,8 @@ TANIMLI_PROFIL_SABLONLARI = {
     "konut_geleneksel": PROFIL_KONUT_GELENEKSEL,
     "park": PROFIL_PARK,
     "kampus": PROFIL_KAMPUS,
-    "avm": PROFIL_AVM
+    "avm": PROFIL_AVM,
+    "konut_karma": PROFIL_KARMA,
 }
 
 MAHALLE_PROFILLERI = {}
