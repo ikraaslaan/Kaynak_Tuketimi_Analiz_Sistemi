@@ -23,7 +23,7 @@ zaman_adimi      = pd.Timedelta(minutes=30)
 output_filename  = "tuketim_verisi_tum_mahalleler_detayli.csv"
 
 # --- MONGODB BAĞLANTISI ---
-MONGODB_URI = "mongodb+srv://23frontend23_db_user:PaoDBStFSwY3nPR0@verikaynagi.bueal8j.mongodb.net"
+MONGODB_URI = "MongoDb adresinizi buraya ekleyin"
 DB_NAME = "tuketim_analizi_db"
 
 print("Veritabanına bağlanılıyor...")
