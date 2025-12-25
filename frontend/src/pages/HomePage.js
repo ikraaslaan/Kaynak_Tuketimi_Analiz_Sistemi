@@ -1,10 +1,14 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { Search, MapPin, Database, TrendingUp, Zap, Droplets, Flame, Clock, BrainCircuit } from "lucide-react"; // BrainCircuit eklendi
+import React, { useState, useEffect, useRef, useMemo, useCallback, useContext } from "react";
+import { Search, MapPin, Database, TrendingUp, Zap, Droplets, Flame, Clock, BrainCircuit, Shield } from "lucide-react"; 
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import bgVideo from "../assets/background.mp4";
 import api from "../services/api";
+import AuthContext from "../context/AuthContext";
 
 const HomePage = () => {
+  const { user } = useContext(AuthContext);
+  // isAdmin ve cityAverages SİLİNDİ (Artık Yönetici.js'de)
+
   const [allData, setAllData] = useState([]);
   const [neighborhoodNames, setNeighborhoodNames] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -15,12 +19,11 @@ const HomePage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
-  const [filterPeriod, setFilterPeriod] = useState("all");
   
   // TAHMİN STATE'İ
   const [prediction, setPrediction] = useState(null);
   const [predLoading, setPredLoading] = useState(false);
-
+  
   const searchContainerRef = useRef(null);
 
   useEffect(() => {
@@ -31,6 +34,7 @@ const HomePage = () => {
         const data = response.data.data;
         setAllData(data);
         setNeighborhoodNames(data.map(item => item.mahalle));
+        setError(null); // Başarılıysa hatayı temizle
       } catch (err) {
         console.error("Veri hatası:", err);
         setError("Veriler sunucudan çekilemedi.");
@@ -41,7 +45,7 @@ const HomePage = () => {
     fetchInitialData();
   }, []);
 
-  // TAHMİN FONKSİYONU (YENİ EKLENDİ)
+  // TAHMİN FONKSİYONU
   const handleGetPrediction = async () => {
     if (!currentNeighborhoodName) return;
     try {
@@ -79,8 +83,7 @@ const HomePage = () => {
     async (neighborhoodName) => {
       if (!neighborhoodName) return;
       
-      // Yeni mahalle seçilince eski tahmini temizle
-      setPrediction(null);
+      setPrediction(null); // Tahmini temizle
 
       const foundData = allData.find(d => d.mahalle === neighborhoodName);
 
@@ -167,7 +170,7 @@ const HomePage = () => {
   };
 
   if (loading) return <div className="text-white text-center pt-20">Yükleniyor...</div>;
-  if (error) return <div className="text-red-500 text-center pt-20">{error}</div>;
+  if (error) return <div className="text-red-500 text-center pt-20 font-bold text-xl bg-black/50 p-4 rounded-xl mx-auto max-w-md mt-10">{error} <br/> <span className="text-sm text-white font-normal">Lütfen sayfayı yenileyin veya sunucuyu kontrol edin.</span></div>;
 
   return (
     <div className="relative min-h-screen overflow-hidden">
@@ -296,6 +299,20 @@ const HomePage = () => {
           </div>
         </div>
       </div>
+
+      {/* Floating "Kayıt Ol" Button for Non-Admins */}
+      {(!user || user.role !== 'admin') && (
+        <button
+          onClick={() => {
+            const event = new CustomEvent("openKayitForm");
+            window.dispatchEvent(event);
+          }}
+          className="fixed bottom-6 right-6 z-40 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-4 rounded-full shadow-lg font-semibold flex items-center gap-2 transition-all hover:scale-105 hover:shadow-xl"
+        >
+          <Shield className="w-5 h-5" />
+          Kayıt Ol
+        </button>
+      )}
     </div>
   );
 };

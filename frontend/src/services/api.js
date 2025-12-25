@@ -1,17 +1,18 @@
 import axios from 'axios';
 
-// Backend adresi
-const API_URL = 'http://localhost:5001/api';
+// GÜNCELLENEN KISIM: localhost yerine 127.0.0.1 kullanıyoruz.
+// Mac cihazlarda localhost bazen algılanmaz, bu yüzden IP adresi daha garantidir.
+const API_URL = 'http://127.0.0.1:5001/api';
 
 const api = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000, // 10 second timeout
+  timeout: 15000, // GÜNCELLENEN KISIM: Süreyi 15 saniyeye çıkardık (Timeout hatasını önlemek için)
 });
 
-// Request interceptor - Add auth token and ensure URL is valid
+// Request interceptor - Token ekleme ve URL kontrolü (SENİN KODUN AYNEN KALDI)
 api.interceptors.request.use(
   (config) => {
     // Ensure baseURL is set correctly
@@ -63,7 +64,7 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor for error handling
+// Response interceptor for error handling (SENİN KODUN AYNEN KALDI)
 api.interceptors.response.use(
   (response) => {
     return response;

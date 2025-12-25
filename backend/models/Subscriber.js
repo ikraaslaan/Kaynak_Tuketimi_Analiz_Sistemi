@@ -1,5 +1,3 @@
-// backend/models/Subscriber.js
-
 const mongoose = require('mongoose');
 
 // Şema Tanımı
@@ -17,11 +15,11 @@ const subscriberSchema = new mongoose.Schema({
   email: {
     type: String,
     required: true,
-    unique: true, // E-postanın benzersiz olması önemli
+    unique: true,
     trim: true,
     lowercase: true
   },
-  neighborhood: {
+  neighborhood: { // Veritabanındaki 'neighborhood' alanı
     type: String,
     required: true
   },
@@ -31,5 +29,5 @@ const subscriberSchema = new mongoose.Schema({
   }
 });
 
-
+// Model varsa onu kullan, yoksa yeni oluştur (Hata almamak için)
 module.exports = mongoose.models.Subscriber || mongoose.model('Subscriber', subscriberSchema);

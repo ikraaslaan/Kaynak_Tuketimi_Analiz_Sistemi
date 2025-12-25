@@ -5,21 +5,21 @@ const nodemailer = require('nodemailer');
 const USER_EMAIL = '23frontend23@gmail.com'; 
 const APP_PASSWORD = 'lqobohztvxyhqnkt'; // Google Uygulama Şifreniz
 
-// 💡 GÜNCELLENMİŞ AYARLAR (Daha kararlı bağlantı için)
+// 💡 GÜNCELLENMİŞ AYARLAR (Senin ayarların aynen korundu)
 const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com', // service: 'gmail' yerine direkt host adresi
-    port: 465, // Güvenli port (SSL)
-    secure: true, // SSL kullanımı açık
+    host: 'smtp.gmail.com', 
+    port: 465, 
+    secure: true, 
     auth: {
         user: USER_EMAIL,
         pass: APP_PASSWORD,
     },
-    // Bağlantı zaman aşımı ayarları (Takılmayı önler)
     connectionTimeout: 10000, 
     greetingTimeout: 10000,
     socketTimeout: 10000 
 });
 
+// 1. FONKSİYON: DOĞRULAMA KODU GÖNDER (Senin kodun)
 const sendVerificationCode = async (email, code) => {
     console.log(`📧 E-posta gönderimi başlatılıyor: ${email}`);
 
@@ -39,50 +39,62 @@ const sendVerificationCode = async (email, code) => {
         `,
     };
 
-    // Create a promise with timeout
-    const sendWithTimeout = (timeoutMs = 8000) => {
-        return Promise.race([
-            // Actual email sending
-            (async () => {
-                try {
-                    // Skip verify() to avoid hanging - directly send email
-                    // verify() can hang on network issues, so we'll let sendMail handle connection
-                    const info = await transporter.sendMail(mailOptions);
-                    console.log('✅ E-posta başarıyla gönderildi ID:', info.messageId);
-                    return true;
-                } catch (error) {
-                    console.error('❌ E-posta Gönderme Hatası:', error.message);
-                    throw error;
-                }
-            })(),
-            // Timeout promise
-            new Promise((_, reject) => {
-                setTimeout(() => {
-                    reject(new Error('E-posta gönderimi zaman aşımına uğradı. Lütfen tekrar deneyin.'));
-                }, timeoutMs);
-            })
-        ]);
-    };
-
-    try {
-        const result = await sendWithTimeout(8000); // 8 second timeout
-        return result;
-    } catch (error) {
-        console.error('❌ E-posta Gönderme Hatası Detayı:', error);
-        // In development, log the code to console instead of failing
-        if (process.env.NODE_ENV === 'development' || !process.env.NODE_ENV) {
-            console.log('\n📧 ===== DEVELOPMENT MODE: EMAIL CODE =====');
-            console.log(`To: ${email}`);
-            console.log(`Code: ${code}`);
-            console.log('==========================================\n');
-            // Return true in dev mode so the flow continues
-            return true;
-        }
-        // In production, throw the error
-        throw new Error(`E-posta servisi hatası: ${error.message}`);
-    }
+    return sendWithTimeout(mailOptions);
 };
 
+// ✨ 2. FONKSİYON: KESİNTİ BİLDİRİMİ GÖNDER (YENİ EKLENDİ)
+const sendOutageNotification = async (email, details) => {
+    console.log(`📧 Kesinti bildirimi gönderiliyor: ${email}`);
+
+    const mailOptions = {
+        from: `"Kentsel Tüketim Analizi" <${USER_EMAIL}>`,
+        to: email,
+        subject: `⚠️ Planlı Kesinti Bildirimi: ${details.mahalle}`,
+        html: `
+            <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #fee2e2; border-radius: 8px; background-color: #fffafa;">
+                <h2 style="color: #dc2626;">Planlı Kesinti Bildirimi</h2>
+                <p>Sayın Abonemiz,</p>
+                <p>Kayıtlı olduğunuz <strong>${details.mahalle}</strong> mahallesinde planlı bir çalışma yapılacaktır.</p>
+                
+                <div style="background-color: #fff; padding: 15px; border-radius: 4px; border: 1px solid #fecaca; margin: 20px 0;">
+                    <p><strong>📍 Mahalle:</strong> ${details.mahalle}</p>
+                    <p><strong>⚡ Kaynak:</strong> ${details.kaynak}</p>
+                    <p><strong>🕒 Başlangıç:</strong> ${details.baslangic}</p>
+                    <p><strong>🕒 Bitiş:</strong> ${details.bitis}</p>
+                    <p><strong>📝 Açıklama:</strong> ${details.aciklama}</p>
+                </div>
+                
+                <p style="font-size: 12px; color: #666;">Bu otomatik bir bilgilendirme mesajıdır.</p>
+            </div>
+        `,
+    };
+
+    return sendWithTimeout(mailOptions);
+};
+
+// YARDIMCI FONKSİYON: Timeout Kontrolü (Senin yazdığın mantık)
+const sendWithTimeout = (mailOptions, timeoutMs = 8000) => {
+    return Promise.race([
+        (async () => {
+            try {
+                const info = await transporter.sendMail(mailOptions);
+                console.log('✅ E-posta başarıyla gönderildi ID:', info.messageId);
+                return true;
+            } catch (error) {
+                console.error('❌ E-posta Gönderme Hatası:', error.message);
+                throw error;
+            }
+        })(),
+        new Promise((_, reject) => {
+            setTimeout(() => {
+                reject(new Error('E-posta gönderimi zaman aşımına uğradı.'));
+            }, timeoutMs);
+        })
+    ]);
+};
+
+// İki fonksiyonu da dışarı açıyoruz
 module.exports = {
-    sendVerificationCode
+    sendVerificationCode,
+    sendOutageNotification
 };

@@ -1,9 +1,28 @@
 const express = require('express');
 const router = express.Router();
-const { getIncidents, createIncident, resolveIncident } = require('../controllers/incidentController');
 
-router.get('/', getIncidents);           // Arızaları listele
-router.post('/', createIncident);        // Yeni kesinti ekle
-router.put('/:id/coz', resolveIncident); // Arızayı kapat
+// 1. Controller'dan fonksiyonları çekiyoruz
+// Buraya 'simulateAutoAlarm' fonksiyonunu ekledik!
+const { 
+    getIncidents, 
+    createPlannedOutage, 
+    createInstantIncident, 
+    resolveIncident,
+    getSystemAlerts,
+    simulateAutoAlarm // <--- YENİ EKLENEN
+} = require('../controllers/incidentController');
+
+// 2. Rotaları Tanımlıyoruz
+
+// --- ÖZEL ROTALAR (En Üste) ---
+// Sistem önce bu özel adresleri kontrol etsin diye en başa yazıyoruz.
+router.get('/alerts', getSystemAlerts); 
+router.get('/simulate', simulateAutoAlarm); // <--- SİMÜLASYON ROTASI BURADA
+
+// --- GENEL ROTALAR ---
+router.get('/', getIncidents);
+router.post('/planned', createPlannedOutage); 
+router.post('/instant', createInstantIncident); 
+router.put('/:id/coz', resolveIncident); 
 
 module.exports = router;

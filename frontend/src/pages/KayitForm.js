@@ -1,13 +1,12 @@
-import React, { useState, useMemo } from "react";
-import bgVideo from "../assets/background.mp4"; // video ismini kontrol et
-import { ArrowLeft } from "lucide-react";
-import api from "../services/api"; // API servisimizi çağır
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import bgVideo from "../assets/background.mp4";
+import { ArrowLeft, Search } from "lucide-react"; // Search ikonu eklendi
+import api from "../services/api";
 import EmailVerification from "../components/EmailVerification";
 import useSubscriberVerification from "../hooks/useSubscriberVerification";
 
-// Mahalle listesini Backend'den çekilene kadar geçici olarak elle giriyoruz.
-// (Not: HomePage'de yaptığımız gibi bunu da backend'den çekebilirsin ama şimdilik böyle kalsın)
-const neighborhoods = ["Sanayi", "Kültürpark", "Universite", "Çaydaçıra", "İzzetpaşa"]; 
+// Mahalle listesi artık Backend'den çekilecek, bu statik liste kaldırıldı.
+// const neighborhoods = ["Sanayi", "Kültürpark", "Universite", "Çaydaçıra", "İzzetpaşa"]; 
 
 const KayitForm = () => {
   const [name, setName] = useState("");
@@ -16,21 +15,62 @@ const KayitForm = () => {
   const [email, setEmail] = useState("");
   const [showList, setShowList] = useState(false);
   const [showVerification, setShowVerification] = useState(false);
+  
+  // YENİ STATE'LER: Mahalle listesi ve yükleme durumu
+  const [neighborhoods, setNeighborhoods] = useState([]);
+  const [loadingNeighborhoods, setLoadingNeighborhoods] = useState(true);
 
   const { initiateVerification, verifyCode, resendCode, isVerifying, error: verificationError } = useSubscriberVerification();
+  
+  // --- 1. MAHALLE LİSTESİNİ API'DEN ÇEKME ---
+  useEffect(() => {
+    const fetchNeighborhoods = async () => {
+      try {
+        setLoadingNeighborhoods(true);
+        // Ana sayfanın kullandığı aynı endpoint'i kullanıyoruz
+        const response = await api.get("/stats/dashboard"); 
+        const names = response.data.data.map(item => item.mahalle);
+        setNeighborhoods(names);
+      } catch (e) {
+        console.error("Mahalle listesi API'den çekilemedi:", e);
+        // Hata durumunda boş liste kullan
+        setNeighborhoods([]);
+      } finally {
+        setLoadingNeighborhoods(false);
+      }
+    };
+    fetchNeighborhoods();
+  }, []);
 
+  // --- 2. FİLTRELEME MANTIĞI (Kullanıcının yazdığına göre dinamik filtreleme) ---
   const filteredNeighborhoods = useMemo(() => {
-    if (!neighborhood.trim()) return [];
+    if (loadingNeighborhoods) return [];
+    
+    // Arama kutusu boşsa veya odaklanılmışsa tüm listeyi göster
+    if (!neighborhood.trim() && showList) return neighborhoods;
+    
+    // Kullanıcının yazdığına göre filtrele (Türkçe karakterleri düzeltmeden basit filtreleme)
+    const query = neighborhood.toLowerCase();
     return neighborhoods.filter((m) =>
-      m.toLowerCase().includes(neighborhood.toLowerCase())
+      m.toLowerCase().includes(query)
     );
-  }, [neighborhood]);
+  }, [neighborhood, neighborhoods, loadingNeighborhoods, showList]);
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name || !surname || !neighborhood || !email) {
+    
+    // --- 3. KRİTİK KONTROL: Sadece listedeki mahalle seçilebilmeli ---
+    // Eğer girilen mahalle adı, API'den çektiğimiz listede yoksa kaydı engelle
+    if (!name || !surname || !email || !neighborhood.trim()) {
       alert("Lütfen tüm alanları doldurunuz.");
       return;
+    }
+    
+    // Tam eşleşme kontrolü: Kullanıcı search yapıp Enter'a basmamış olabilir.
+    if (!neighborhoods.includes(neighborhood.trim())) {
+        alert("Lütfen listede bulunan geçerli bir mahalle adı girin veya listeden seçin.");
+        return;
     }
 
     // Initiate email verification instead of direct subscription
@@ -38,7 +78,7 @@ const KayitForm = () => {
       name,
       surname,
       email,
-      neighborhood
+      neighborhood: neighborhood.trim() // Kontrol edilmiş değeri gönder
     });
 
     if (result.success) {
@@ -47,8 +87,20 @@ const KayitForm = () => {
       alert(result.error || "Doğrulama başlatılamadı. Lütfen tekrar deneyin.");
     }
   };
+  
+  // Mahalle seçimi yapıldığında çalışacak fonksiyon
+  const handleSelectNeighborhood = useCallback((m) => {
+    setNeighborhood(m); 
+    setShowList(false);
+  }, []);
 
-  // This function is called ONLY after successful email verification
+  // Input değiştikçe çalışacak fonksiyon
+  const handleNeighborhoodChange = (e) => {
+    setNeighborhood(e.target.value); 
+    setShowList(true); // Yazmaya başladığı an listeyi göster
+  }
+
+  // Bu fonksiyon başarıyla e-posta doğrulanmasından SONRA çağrılır
   const handleVerificationSuccess = async (subscriberData) => {
     try {
       // Original subscriber submission logic - only executed after verification
@@ -99,14 +151,20 @@ const KayitForm = () => {
       />
     );
   }
+  
+  // Yüklenme durumunu burada gösterelim
+  if (loadingNeighborhoods) {
+      return (
+        <div className="relative min-h-screen flex items-center justify-center bg-black/80 text-white z-20">
+             <p>Mahalle listesi yükleniyor...</p>
+        </div>
+      );
+  }
+
 
   return (
-    // ... (HTML tasarım kodların aynı kalsın) ...
-    // Sadece <form onSubmit={handleSubmit}> olduğundan emin ol
     <div className="relative min-h-screen flex flex-col items-center justify-start px-4 py-10 overflow-hidden">
-      {/* ... Video ve Geri Dön butonu kodları aynı ... */}
       
-      {/* Form Kodları aynı kalacak, sadece logic değişti */}
       <video
         autoPlay
         loop
@@ -131,11 +189,12 @@ const KayitForm = () => {
         <p className="text-center text-white/90 mb-8">Mahallenizdeki kesintilerden mail yoluyla haberdar olun.</p>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-           {/* Inputlar aynı... */}
+           
            <div>
             <label className="text-sm font-medium text-white">Adınız</label>
             <input className="w-full bg-white/10 text-white placeholder-white/60 px-4 py-3 rounded-xl border border-white/40" placeholder="Adınız" value={name} onChange={(e) => setName(e.target.value)} />
            </div>
+           
            <div>
             <label className="text-sm font-medium text-white">Soyadınız</label>
             <input className="w-full bg-white/10 text-white placeholder-white/60 px-4 py-3 rounded-xl border border-white/40" placeholder="Soyadınız" value={surname} onChange={(e) => setSurname(e.target.value)} />
@@ -143,11 +202,30 @@ const KayitForm = () => {
            
            <div className="relative">
             <label className="text-sm font-medium text-white">Mahalleniz</label>
-            <input type="text" className="w-full bg-white/10 text-white placeholder-white/60 px-4 py-3 rounded-xl border border-white/40" placeholder="Mahalle seçin" value={neighborhood} onChange={(e) => { setNeighborhood(e.target.value); setShowList(true); }} onBlur={() => setTimeout(() => setShowList(false), 200)} />
+            <div className="relative flex items-center">
+                <input 
+                  type="text" 
+                  className="w-full bg-white/10 text-white placeholder-white/60 px-4 py-3 pl-10 rounded-xl border border-white/40" 
+                  placeholder="Mahalle ara" 
+                  value={neighborhood} 
+                  onChange={handleNeighborhoodChange} // Yazma ve filtreleme aktif
+                  onFocus={() => setShowList(true)} 
+                  onBlur={() => setTimeout(() => setShowList(false), 200)} // Listeyi kapatmak için küçük bir gecikme ekledik
+                />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/60" />
+            </div>
+            
+            {/* Listeyi göstermek için input'a tıklanması yeterli (onFocus) */}
             {showList && filteredNeighborhoods.length > 0 && (
               <ul className="absolute left-0 right-0 bg-gray-900 text-white border border-white/30 rounded-xl mt-1 max-h-40 overflow-y-auto z-30">
                 {filteredNeighborhoods.map((m, i) => (
-                  <li key={i} onClick={() => { setNeighborhood(m); setShowList(false); }} className="px-4 py-2 cursor-pointer hover:bg-white/20">{m}</li>
+                  <li 
+                    key={i} 
+                    onClick={() => handleSelectNeighborhood(m)} 
+                    className="px-4 py-2 cursor-pointer hover:bg-white/20"
+                  >
+                    {m}
+                  </li>
                 ))}
               </ul>
             )}

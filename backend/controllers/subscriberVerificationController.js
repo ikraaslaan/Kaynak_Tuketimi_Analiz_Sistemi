@@ -49,22 +49,7 @@ exports.initiateSubscriberVerification = async (req, res) => {
     }
 
     // Check if email already exists as subscriber
-    // Wrap in try-catch to handle DB connection errors gracefully
-    let existingSubscriber;
-    try {
-      existingSubscriber = await Subscriber.findOne({ email });
-    } catch (dbError) {
-      console.error('Database error while checking subscriber:', dbError);
-      // If DB is not connected, return error immediately
-      if (!res.headersSent) {
-        return res.status(503).json({
-          success: false,
-          message: 'Veritabanı bağlantısı kurulamadı. Lütfen daha sonra tekrar deneyin.'
-        });
-      }
-      return;
-    }
-    
+    const existingSubscriber = await Subscriber.findOne({ email });
     if (existingSubscriber) {
       return res.status(400).json({
         success: false,

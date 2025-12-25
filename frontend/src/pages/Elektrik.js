@@ -9,6 +9,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import api from "../services/api";
 
 const normalizeTr = (str) =>
   (str || "")
@@ -27,30 +28,78 @@ const normalizeTr = (str) =>
     .replace(/Ç/g, "c");
 
 const Elektrik = ({ selectedNeighborhood }) => {
-  const [neighborhoods, setNeighborhoods] = useState([]);
+  const [neighborhoodNames, setNeighborhoodNames] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
-  const [selected, setSelected] = useState(selectedNeighborhood || null);
+  const [selectedNeighborhoodName, setSelectedNeighborhoodName] = useState(null);
+  const [timeSeriesData, setTimeSeriesData] = useState([]);
+  const [statistics, setStatistics] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(false);
   const searchRef = useRef(null);
 
+  // 1. MAHALLE LİSTESİNİ ÇEK VE VARSAYILAN SEÇİMİ YAP (YENİ EKLEME)
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchNeighborhoods = async () => {
       try {
-        const res = await fetch("http://localhost:5001/api/neighborhoods");
-        const data = await res.json();
-        setNeighborhoods(data || []);
-        setFiltered(data || []);
+        setLoading(true);
+        const response = await api.get("/stats/dashboard");
+        const data = response.data.data;
+        const names = data.map(item => item.mahalle);
+        setNeighborhoodNames(names);
+        setFiltered(names);
+
+        // --- YENİ EKLENEN KISIM ---
+        // Sayfa yüklendiğinde varsayılan olarak ilk mahalleyi seç
+        if (names.length > 0 && !selectedNeighborhoodName) {
+            // Eğer 'Çaydaçıra' varsa onu seç, yoksa ilkini seç
+            const defaultName = names.includes("Çaydaçıra") ? "Çaydaçıra" : names[0];
+            setSelectedNeighborhoodName(defaultName);
+            setSearchQuery(defaultName); // Arama kutusuna yaz
+        }
+        // --- YENİ EKLENEN KISIM SONU ---
+
       } catch (e) {
-        console.error(e);
+        console.error("Mahalle listesi yüklenemedi:", e);
       } finally {
         setLoading(false);
       }
     };
-    fetchData();
-  }, []);
+    fetchNeighborhoods();
+  }, []); // selectedNeighborhoodName'i dependency listesinden çıkardık
+
+  // 2. MAHALLE SEÇİLİNCE ZAMAN SERİSİ VERİSİNİ ÇEK
+  useEffect(() => {
+    const fetchTimeSeries = async () => {
+      if (!selectedNeighborhoodName) {
+        setTimeSeriesData([]);
+        setStatistics(null);
+        return;
+      }
+
+      try {
+        setDataLoading(true);
+        // Backend'de varsayılan filtre 7 gün olduğu için tarih göndermiyoruz.
+        const response = await api.get(`/stats/timeseries?mahalle=${encodeURIComponent(selectedNeighborhoodName)}&kaynak=elektrik`);
+        const data = response.data.data;
+        setTimeSeriesData(data.timeSeries || []);
+        setStatistics(data.statistics || null);
+      } catch (e) {
+        // Backend 404 döndürürse (veri yoksa) uyarı veririz
+        console.error("Elektrik verileri yüklenemedi veya boş döndü:", e);
+        setTimeSeriesData([]);
+        setStatistics(null);
+      } finally {
+        setDataLoading(false);
+      }
+    };
+
+    fetchTimeSeries();
+  }, [selectedNeighborhoodName]);
+
+  // --- (Kalan useEffect'ler ve Fonksiyonlar aynı kalır) ---
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -66,17 +115,17 @@ const Elektrik = ({ selectedNeighborhood }) => {
     const q = e.target.value;
     setSearchQuery(q);
     const nq = normalizeTr(q);
-    const res = neighborhoods.filter((n) =>
-      normalizeTr(n.name).includes(nq)
+    const res = neighborhoodNames.filter((n) =>
+      normalizeTr(n).includes(nq)
     );
     setFiltered(res.slice(0, 8));
     setShowDropdown(true);
     setHighlightedIndex(-1);
   };
 
-  const handleSelect = (n) => {
-    setSelected(n);
-    setSearchQuery(n.name);
+  const handleSelect = (neighborhoodName) => {
+    setSelectedNeighborhoodName(neighborhoodName);
+    setSearchQuery(neighborhoodName);
     setShowDropdown(false);
   };
 
@@ -97,26 +146,25 @@ const Elektrik = ({ selectedNeighborhood }) => {
   };
 
   const summary = useMemo(() => {
-    const electricity = selected?.electricity;
-    if (electricity == null) return null;
-    if (Array.isArray(electricity)) {
-      if (electricity.length === 0) return null;
-      const avg = Math.round(electricity.reduce((a, b) => a + b, 0) / electricity.length);
-      const hasTrend = electricity.length >= 2 && electricity[0] !== 0;
-      const change = hasTrend
-        ? (((electricity[electricity.length - 1] - electricity[0]) / electricity[0]) * 100).toFixed(1) + "%"
-        : "-";
-      const inc = hasTrend ? parseFloat(change) >= 0 : null;
-      return { value: `${avg.toLocaleString()} kWh`, change, inc };
-    }
-    const avg = Number(electricity || 0);
-    return { value: `${avg.toLocaleString()} kWh`, change: "-", inc: null };
-  }, [selected]);
+    if (!statistics) return null;
+    return { 
+      value: `${statistics.ortalama.toLocaleString()} kWh`, 
+      change: statistics.degisim, 
+      inc: statistics.artis 
+    };
+  }, [statistics]);
 
   const chartData = useMemo(() => {
-    if (!selected?.electricity || !Array.isArray(selected.electricity)) return [];
-    return selected.electricity.map((v, i) => ({ week: `Hafta ${i + 1}`, value: v }));
-  }, [selected]);
+    // Backend zaten son 7 gün verisi gönderiyor. Eğer veri çoksa (30'dan fazla) son 30'u alalım.
+    const sliced = timeSeriesData.length > 30 ? timeSeriesData.slice(-30) : timeSeriesData;
+    
+    // Etiketleri düzeltelim
+    return sliced.map((item, index) => ({
+      ...item,
+      // Tarih değerini kullanıyoruz (Backend'den düzgün tarih formatı geliyor)
+      week: item.tarih || `Gün ${index + 1}`,
+    }));
+  }, [timeSeriesData]);
 
   if (loading) {
     return (
@@ -126,6 +174,8 @@ const Elektrik = ({ selectedNeighborhood }) => {
     );
   }
 
+  // --- RENDER (GÖRÜNÜM) KISMI ---
+
   return (
     <div className="pt-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto pb-12">
       <div className="animate-fade-in">
@@ -134,11 +184,12 @@ const Elektrik = ({ selectedNeighborhood }) => {
             <Zap className="w-7 h-7 text-emerald-600" />
             Elektrik Tüketim Analizi
           </h2>
-          <p className="text-gray-700">Mahalle bazında haftalık elektrik tüketimi</p>
+          <p className="text-gray-700">Mahalle bazında haftalık elektrik tüketim trendi</p>
         </div>
 
+        {/* ARAMA KUTUSU */}
         <div className="bg-white rounded-3xl p-8 shadow-sm border border-emerald-100/50 mb-10" ref={searchRef}>
-          <h3 className="text-lg font-semibold text-gray-800 mb-5">Mahalle Ara</h3>
+          <h3 className="text-lg font-semibold text-gray-800 mb-5">Mahalle Seçimi</h3>
           <div className="relative">
             <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
@@ -155,7 +206,7 @@ const Elektrik = ({ selectedNeighborhood }) => {
               <div className="absolute z-10 w-full mt-3 bg-white rounded-2xl shadow-md border border-emerald-100/50 max-h-64 overflow-y-auto">
                 {filtered.map((n, idx) => (
                   <button
-                    key={n.name + idx}
+                    key={n + idx}
                     onClick={() => handleSelect(n)}
                     className={`w-full text-left px-5 py-4 hover:bg-emerald-50 transition-all duration-200 ${
                       idx === highlightedIndex ? "bg-emerald-50" : ""
@@ -163,7 +214,7 @@ const Elektrik = ({ selectedNeighborhood }) => {
                       idx === filtered.length - 1 ? "rounded-b-2xl" : "border-b border-emerald-100/50"
                     }`}
                   >
-                    <span className="font-medium text-gray-800">{n.name}</span>
+                    <span className="font-medium text-gray-800">{n}</span>
                   </button>
                 ))}
               </div>
@@ -171,18 +222,37 @@ const Elektrik = ({ selectedNeighborhood }) => {
           </div>
         </div>
 
-        {!selected && (
+        {/* GÖRÜNTÜLEME ALANI */}
+
+        {/* 1. Seçim yoksa */}
+        {!selectedNeighborhoodName && (
           <div className="bg-white rounded-3xl p-8 shadow-sm border border-emerald-100/50 text-gray-700">
             Lütfen bir mahalle seçiniz.
           </div>
         )}
 
-        {selected && summary && (
+        {/* 2. Veri Yükleniyor durumu */}
+        {dataLoading && selectedNeighborhoodName && (
+          <div className="bg-white rounded-3xl p-8 shadow-sm border border-emerald-100/50 text-gray-700">
+            {selectedNeighborhoodName} mahallesi verileri yükleniyor...
+          </div>
+        )}
+
+        {/* 3. Veri boşsa (Backend'deki 7 günlük filtre nedeniyle veri gelmeyebilir) */}
+        {selectedNeighborhoodName && !dataLoading && chartData.length === 0 && (
+            <div className="bg-red-50 rounded-3xl p-8 shadow-sm border border-red-300 text-red-700">
+                <p className="font-semibold">⚠️ {selectedNeighborhoodName} için güncel elektrik verisi (Son 7 Gün) bulunamadı.</p>
+                <p className="text-sm mt-1">Lütfen başka bir mahalle seçmeyi deneyin veya yönetici ile iletişime geçin.</p>
+            </div>
+        )}
+
+        {/* 4. Veri geldiyse (Kartlar) */}
+        {selectedNeighborhoodName && summary && chartData.length > 0 && !dataLoading && (
           <div className="grid grid-cols-1 gap-6 mb-10">
             <div className="bg-white rounded-3xl p-8 shadow-sm border border-emerald-100/50 hover:shadow-md transition-shadow duration-300">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Ortalama Elektrik Tüketimi</h4>
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">{selectedNeighborhoodName} Ort. Elektrik Tüketimi (Son 7 Gün)</h4>
                   <p className="text-3xl font-bold text-gray-800">{summary.value}</p>
                 </div>
                 <div className={`text-sm font-semibold ${summary.inc ? "text-emerald-600" : "text-red-500"}`}>
@@ -193,9 +263,10 @@ const Elektrik = ({ selectedNeighborhood }) => {
           </div>
         )}
 
-        {selected && chartData.length > 0 && (
+        {/* 5. Veri geldiyse (Grafik) */}
+        {selectedNeighborhoodName && chartData.length > 0 && !dataLoading && (
           <div className="bg-white rounded-3xl p-8 shadow-sm border border-emerald-100/50 chart-container">
-            <h3 className="text-lg font-bold mb-6 text-gray-800">Elektrik Tüketim Trendi (kWh)</h3>
+            <h3 className="text-lg font-bold mb-6 text-gray-800">{selectedNeighborhoodName} Elektrik Tüketim Trendi (kWh)</h3>
             <div className="w-full h-[320px]">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData}>
@@ -205,9 +276,15 @@ const Elektrik = ({ selectedNeighborhood }) => {
                       <stop offset="95%" stopColor="#059669" stopOpacity={0.1} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#d1fae5" />
-                  <XAxis dataKey="week" stroke="#6b7280" tickMargin={8} />
-                  <YAxis stroke="#6b7280" tickMargin={8} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#d1fae5" vertical={false} />
+                  <XAxis 
+                    dataKey="tarih" // X ekseninde artık tarih gösteriyoruz
+                    stroke="#6b7280" 
+                    tickMargin={8}
+                    tick={{ fontSize: 12 }}
+                    interval="preserveStartEnd"
+                  />
+                  <YAxis stroke="#6b7280" tickMargin={8} tick={{ fontSize: 12 }} />
                   <Tooltip 
                     cursor={{ stroke: '#a7f3d0', strokeWidth: 1 }}
                     contentStyle={{
@@ -247,5 +324,3 @@ const Elektrik = ({ selectedNeighborhood }) => {
 };
 
 export default Elektrik;
-
-

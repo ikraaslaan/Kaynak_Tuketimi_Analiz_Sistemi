@@ -9,6 +9,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import api from "../services/api";
 
 const normalizeTr = (str) =>
   (str || "")
@@ -27,30 +28,77 @@ const normalizeTr = (str) =>
     .replace(/Ç/g, "c");
 
 const Su = ({ selectedNeighborhood }) => {
-  const [neighborhoods, setNeighborhoods] = useState([]);
+  const [neighborhoodNames, setNeighborhoodNames] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
-  const [selected, setSelected] = useState(selectedNeighborhood || null);
+  const [selectedNeighborhoodName, setSelectedNeighborhoodName] = useState(null);
+  const [timeSeriesData, setTimeSeriesData] = useState([]);
+  const [statistics, setStatistics] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(false);
   const searchRef = useRef(null);
 
+  // 1. MAHALLE LİSTESİNİ ÇEK VE VARSAYILAN SEÇİMİ YAP (GÜNCELLENDİ)
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchNeighborhoods = async () => {
       try {
-        const res = await fetch("http://localhost:5001/api/neighborhoods");
-        const data = await res.json();
-        setNeighborhoods(data || []);
-        setFiltered(data || []);
+        setLoading(true);
+        const response = await api.get("/stats/dashboard");
+        const data = response.data.data;
+        const names = data.map(item => item.mahalle);
+        setNeighborhoodNames(names);
+        setFiltered(names);
+
+        // --- YENİ EKLENEN KISIM ---
+        // Sayfa yüklendiğinde varsayılan olarak ilk mahalleyi seç
+        if (names.length > 0 && !selectedNeighborhoodName) {
+            const defaultName = names.includes("Çaydaçıra") ? "Çaydaçıra" : names[0];
+            setSelectedNeighborhoodName(defaultName);
+            setSearchQuery(defaultName); // Arama kutusuna yaz
+        }
+        // --- YENİ EKLENEN KISIM SONU ---
+
       } catch (e) {
-        console.error(e);
+        console.error("Mahalle listesi yüklenemedi:", e);
       } finally {
         setLoading(false);
       }
     };
-    fetchData();
-  }, []);
+    fetchNeighborhoods();
+  }, []); // İlk yüklemede çalışsın
+
+  // 2. MAHALLE SEÇİLİNCE ZAMAN SERİSİ VERİSİNİ ÇEK
+  useEffect(() => {
+    const fetchTimeSeries = async () => {
+      if (!selectedNeighborhoodName) {
+        setTimeSeriesData([]);
+        setStatistics(null);
+        return;
+      }
+
+      try {
+        setDataLoading(true);
+        // Backend'de varsayılan filtre 7 gün olduğu için tarih göndermiyoruz.
+        const response = await api.get(`/stats/timeseries?mahalle=${encodeURIComponent(selectedNeighborhoodName)}&kaynak=su`);
+        const data = response.data.data;
+        setTimeSeriesData(data.timeSeries || []);
+        setStatistics(data.statistics || null);
+      } catch (e) {
+        // Hata durumunda (Örn: 404 - veri yoksa) veriyi temizle
+        console.error("Su verileri yüklenemedi veya boş döndü:", e);
+        setTimeSeriesData([]);
+        setStatistics(null);
+      } finally {
+        setDataLoading(false);
+      }
+    };
+
+    fetchTimeSeries();
+  }, [selectedNeighborhoodName]);
+
+  // --- (Kalan useEffect'ler ve Fonksiyonlar aynı kalır) ---
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -66,17 +114,17 @@ const Su = ({ selectedNeighborhood }) => {
     const q = e.target.value;
     setSearchQuery(q);
     const nq = normalizeTr(q);
-    const res = neighborhoods.filter((n) =>
-      normalizeTr(n.name).includes(nq)
+    const res = neighborhoodNames.filter((n) =>
+      normalizeTr(n).includes(nq)
     );
     setFiltered(res.slice(0, 8));
     setShowDropdown(true);
     setHighlightedIndex(-1);
   };
 
-  const handleSelect = (n) => {
-    setSelected(n);
-    setSearchQuery(n.name);
+  const handleSelect = (neighborhoodName) => {
+    setSelectedNeighborhoodName(neighborhoodName);
+    setSearchQuery(neighborhoodName);
     setShowDropdown(false);
   };
 
@@ -97,26 +145,24 @@ const Su = ({ selectedNeighborhood }) => {
   };
 
   const summary = useMemo(() => {
-    const water = selected?.water;
-    if (water == null) return null;
-    if (Array.isArray(water)) {
-      if (water.length === 0) return null;
-      const avg = Math.round(water.reduce((a, b) => a + b, 0) / water.length);
-      const hasTrend = water.length >= 2 && water[0] !== 0;
-      const change = hasTrend
-        ? (((water[water.length - 1] - water[0]) / water[0]) * 100).toFixed(1) + "%"
-        : "-";
-      const inc = hasTrend ? parseFloat(change) >= 0 : null;
-      return { value: `${avg.toLocaleString()} m³`, change, inc };
-    }
-    const avg = Number(water || 0);
-    return { value: `${avg.toLocaleString()} m³`, change: "-", inc: null };
-  }, [selected]);
+    if (!statistics) return null;
+    return { 
+      value: `${statistics.ortalama.toLocaleString()} m³`, 
+      change: statistics.degisim, 
+      inc: statistics.artis 
+    };
+  }, [statistics]);
 
   const chartData = useMemo(() => {
-    if (!selected?.water || !Array.isArray(selected.water)) return [];
-    return selected.water.map((v, i) => ({ week: `Hafta ${i + 1}`, value: v }));
-  }, [selected]);
+    // Backend zaten son 7 gün verisi gönderiyor. Eğer veri çoksa (30'dan fazla) son 30'u alalım.
+    const sliced = timeSeriesData.length > 30 ? timeSeriesData.slice(-30) : timeSeriesData;
+    
+    return sliced.map((item, index) => ({
+      ...item,
+      // X ekseninde tarih değerini kullanıyoruz
+      tarih: item.tarih || `Gün ${index + 1}`,
+    }));
+  }, [timeSeriesData]);
 
   if (loading) {
     return (
@@ -126,19 +172,29 @@ const Su = ({ selectedNeighborhood }) => {
     );
   }
 
+  // --- RENDER (GÖRÜNÜM) KISMI ---
+
+  // Grafik Renkleri (Su Temasına uygun, Mavi/Turkuaz tonları)
+  const chartColors = {
+      stroke: '#3b82f6', // Mavi
+      fillStop1: '#93c5fd', // Açık Mavi
+      fillStop2: '#93c5fd00'
+  };
+
   return (
     <div className="pt-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto pb-12">
       <div className="animate-fade-in">
         <div className="mb-10">
           <h2 className="text-2xl font-bold text-gray-800 mb-3 flex items-center gap-3">
-            <Droplets className="w-7 h-7 text-emerald-600" />
+            <Droplets className="w-7 h-7 text-blue-600" />
             Su Tüketim Analizi
           </h2>
-          <p className="text-gray-700">Mahalle bazında haftalık su tüketimi</p>
+          <p className="text-gray-700">Mahalle bazında haftalık su tüketim trendi</p>
         </div>
 
-        <div className="bg-white rounded-3xl p-8 shadow-sm border border-emerald-100/50 mb-10" ref={searchRef}>
-          <h3 className="text-lg font-semibold text-gray-800 mb-5">Mahalle Ara</h3>
+        {/* ARAMA KUTUSU */}
+        <div className="bg-white rounded-3xl p-8 shadow-sm border border-blue-100/50 mb-10" ref={searchRef}>
+          <h3 className="text-lg font-semibold text-gray-800 mb-5">Mahalle Seçimi</h3>
           <div className="relative">
             <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
@@ -148,22 +204,22 @@ const Su = ({ selectedNeighborhood }) => {
               onChange={handleSearchChange}
               onFocus={() => setShowDropdown(true)}
               onKeyDown={handleKeyDown}
-              className="w-full pl-14 pr-5 py-4 border border-emerald-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-400 transition-all duration-300 text-gray-800 placeholder:text-gray-400"
+              className="w-full pl-14 pr-5 py-4 border border-blue-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400 transition-all duration-300 text-gray-800 placeholder:text-gray-400"
               aria-label="Mahalle ara"
             />
             {showDropdown && filtered.length > 0 && (
-              <div className="absolute z-10 w-full mt-3 bg-white rounded-2xl shadow-md border border-emerald-100/50 max-h-64 overflow-y-auto">
+              <div className="absolute z-10 w-full mt-3 bg-white rounded-2xl shadow-md border border-blue-100/50 max-h-64 overflow-y-auto">
                 {filtered.map((n, idx) => (
                   <button
-                    key={n.name + idx}
+                    key={n + idx}
                     onClick={() => handleSelect(n)}
-                    className={`w-full text-left px-5 py-4 hover:bg-emerald-50 transition-all duration-200 ${
-                      idx === highlightedIndex ? "bg-emerald-50" : ""
+                    className={`w-full text-left px-5 py-4 hover:bg-blue-50 transition-all duration-200 ${
+                      idx === highlightedIndex ? "bg-blue-50" : ""
                     } ${idx === 0 ? "rounded-t-2xl" : ""} ${
-                      idx === filtered.length - 1 ? "rounded-b-2xl" : "border-b border-emerald-100/50"
+                      idx === filtered.length - 1 ? "rounded-b-2xl" : "border-b border-blue-100/50"
                     }`}
                   >
-                    <span className="font-medium text-gray-800">{n.name}</span>
+                    <span className="font-medium text-gray-800">{n}</span>
                   </button>
                 ))}
               </div>
@@ -171,18 +227,37 @@ const Su = ({ selectedNeighborhood }) => {
           </div>
         </div>
 
-        {!selected && (
-          <div className="bg-white rounded-3xl p-8 shadow-sm border border-emerald-100/50 text-gray-700">
+        {/* GÖRÜNTÜLEME ALANI */}
+
+        {/* 1. Seçim yoksa */}
+        {!selectedNeighborhoodName && (
+          <div className="bg-white rounded-3xl p-8 shadow-sm border border-blue-100/50 text-gray-700">
             Lütfen bir mahalle seçiniz.
           </div>
         )}
 
-        {selected && summary && (
+        {/* 2. Veri Yükleniyor durumu */}
+        {dataLoading && selectedNeighborhoodName && (
+          <div className="bg-white rounded-3xl p-8 shadow-sm border border-blue-100/50 text-gray-700">
+            {selectedNeighborhoodName} mahallesi verileri yükleniyor...
+          </div>
+        )}
+
+        {/* 3. Veri boşsa (7 günlük filtre nedeniyle veri gelmeyebilir) */}
+        {selectedNeighborhoodName && !dataLoading && chartData.length === 0 && (
+            <div className="bg-red-50 rounded-3xl p-8 shadow-sm border border-red-300 text-red-700">
+                <p className="font-semibold">⚠️ {selectedNeighborhoodName} için güncel su verisi (Son 7 Gün) bulunamadı.</p>
+                <p className="text-sm mt-1">Lütfen başka bir mahalle seçmeyi deneyin veya yönetici ile iletişime geçin.</p>
+            </div>
+        )}
+
+        {/* 4. Veri geldiyse (Kartlar) */}
+        {selectedNeighborhoodName && summary && chartData.length > 0 && !dataLoading && (
           <div className="grid grid-cols-1 gap-6 mb-10">
-            <div className="bg-white rounded-3xl p-8 shadow-sm border border-emerald-100/50 hover:shadow-md transition-shadow duration-300">
+            <div className="bg-white rounded-3xl p-8 shadow-sm border border-blue-100/50 hover:shadow-md transition-shadow duration-300">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Ortalama Su Tüketimi</h4>
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">{selectedNeighborhoodName} Ort. Su Tüketimi (Son 7 Gün)</h4>
                   <p className="text-3xl font-bold text-gray-800">{summary.value}</p>
                 </div>
                 <div className={`text-sm font-semibold ${summary.inc ? "text-emerald-600" : "text-red-500"}`}>
@@ -193,26 +268,34 @@ const Su = ({ selectedNeighborhood }) => {
           </div>
         )}
 
-        {selected && chartData.length > 0 && (
-          <div className="bg-white rounded-3xl p-8 shadow-sm border border-emerald-100/50 chart-container">
-            <h3 className="text-lg font-bold mb-6 text-gray-800">Su Tüketim Trendi (m³)</h3>
+        {/* 5. Veri geldiyse (Grafik) */}
+        {selectedNeighborhoodName && chartData.length > 0 && !dataLoading && (
+          <div className="bg-white rounded-3xl p-8 shadow-sm border border-blue-100/50 chart-container">
+            <h3 className="text-lg font-bold mb-6 text-gray-800">{selectedNeighborhoodName} Su Tüketim Trendi (m³)</h3>
             <div className="w-full h-[320px]">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData}>
                   <defs>
+                    {/* GRAFİK RENK TANIMI (SU TEMASI) */}
                     <linearGradient id="colorWater" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#059669" stopOpacity={0.9} />
-                      <stop offset="95%" stopColor="#059669" stopOpacity={0.1} />
+                      <stop offset="5%" stopColor={chartColors.fillStop1} stopOpacity={0.9} />
+                      <stop offset="95%" stopColor={chartColors.fillStop2} stopOpacity={0.1} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#d1fae5" />
-                  <XAxis dataKey="week" stroke="#6b7280" tickMargin={8} />
-                  <YAxis stroke="#6b7280" tickMargin={8} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e0f7fa" vertical={false} />
+                  <XAxis 
+                    dataKey="tarih" 
+                    stroke="#6b7280" 
+                    tickMargin={8}
+                    tick={{ fontSize: 12 }}
+                    interval="preserveStartEnd"
+                  />
+                  <YAxis stroke="#6b7280" tickMargin={8} tick={{ fontSize: 12 }} />
                   <Tooltip 
-                    cursor={{ stroke: '#a7f3d0', strokeWidth: 1 }}
+                    cursor={{ stroke: chartColors.stroke, strokeWidth: 1 }}
                     contentStyle={{
                       backgroundColor: '#ffffff',
-                      border: '1px solid #d1fae5',
+                      border: `1px solid ${chartColors.stroke}`,
                       borderRadius: 12,
                       boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
                       padding: '10px 12px',
@@ -224,10 +307,10 @@ const Su = ({ selectedNeighborhood }) => {
                   <Line 
                     type="monotone" 
                     dataKey="value" 
-                    stroke="url(#colorWater)" 
+                    stroke={chartColors.stroke} 
                     strokeWidth={3}
                     dot={false}
-                    activeDot={{ r: 5, stroke: '#059669', strokeWidth: 2, fill: '#ffffff' }}
+                    activeDot={{ r: 5, stroke: chartColors.stroke, strokeWidth: 2, fill: '#ffffff' }}
                     isAnimationActive={true}
                     animationDuration={800}
                     name="Su (m³)"
@@ -247,5 +330,3 @@ const Su = ({ selectedNeighborhood }) => {
 };
 
 export default Su;
-
-
