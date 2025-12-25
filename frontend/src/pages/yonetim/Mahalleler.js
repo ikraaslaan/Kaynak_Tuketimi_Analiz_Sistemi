@@ -2,9 +2,6 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import api from '../../services/api'; 
 import { MapPin, Zap, Droplets, Flame, AlertTriangle, Activity, X, Search, BarChart2 } from 'lucide-react'; 
 
-/* =========================================================================
-   1. YARDIMCI BİLEŞENLER
-   ========================================================================= */
 const StatRow = ({ icon: Icon, label, value, unit, color, iconColor, bgColor }) => (
     <div className="flex justify-between items-center p-3 rounded-xl hover:bg-gray-50 transition-colors">
         <div className="flex items-center gap-3">
@@ -58,7 +55,7 @@ const KaynakKarti = ({ title, icon: Icon, color, isSelected, onClick, onAriza, l
 };
 
 /* =========================================================================
-   3. ANA MODAL BİLEŞENİ (CANLI GÖRÜNÜM İÇİN TİTREŞİM EKLENDİ)
+   ANA MODAL (SAF GERÇEK VERİ - 15 SANİYE)
    ========================================================================= */
 const MahalleDetayModal = ({ mahalleData: initialData, onClose, onIncidentCreated }) => {
     const [loading, setLoading] = useState(false);
@@ -67,62 +64,53 @@ const MahalleDetayModal = ({ mahalleData: initialData, onClose, onIncidentCreate
     const [lastUpdate, setLastUpdate] = useState(new Date()); 
     const [currentValues, setCurrentValues] = useState(initialData); 
 
-    // --- YARDIMCI: TİTREŞİM ÜRETİCİ ---
-    // Gerçek veriye +/- 5 birimlik rastgele bir sapma ekler.
-    // Böylece ortalama 500.00 ise grafik 498 - 502 arasında canlı gibi oynar.
-    const addJitter = useCallback((baseValue) => {
-        const jitterAmount = Math.random() * 10 - 5; // -5 ile +5 arası rastgele sayı
-        return Math.max(0, baseValue + jitterAmount); // 0'ın altına düşmesin
-    }, []);
-
-    // --- İLK AÇILIŞ ---
+    // --- 1. BAŞLANGIÇ: ELİMİZDEKİ TEK VERİYİ 24 KERE YAZIYORUZ ---
     useEffect(() => {
-        let baseValue = 50;
+        let baseValue = 0;
         if (selectedSource === 'Elektrik') baseValue = Number(initialData.elektrik.ortalama);
         else if (selectedSource === 'Su') baseValue = Number(initialData.su.ortalama);
         else if (selectedSource === 'Doğalgaz') baseValue = Number(initialData.dogalgaz.ortalama);
 
-        // İlk açılışta da dümdüz olmasın, hafif dalgalı başlasın
-        const initialGraph = Array.from({ length: 24 }, () => addJitter(baseValue));
+        const initialGraph = Array.from({ length: 24 }, () => baseValue);
         setGraphData(initialGraph);
         setCurrentValues(initialData);
-    }, [selectedSource, initialData, addJitter]);
+    }, [selectedSource, initialData]);
 
-    // --- CANLI VERİ GÜNCELLEME (15 SANİYE) ---
+    // --- 2. CANLI GÜNCELLEME: HER 15 SANİYEDE BİR ---
     useEffect(() => {
         const fetchRealTimeData = async () => {
             try {
-                const response = await api.get('/stats/dashboard');
+                // --- DÜZELTME 1: ARTIK YENİ CANLI ROTA'YA GİDİYORUZ ---
+                const response = await api.get('/incidents/live-dashboard'); 
+                
                 const allData = response.data.data;
                 const myMahalle = allData.find(m => m.mahalle === initialData.mahalle);
 
                 if (myMahalle) {
                     setCurrentValues(myMahalle);
 
-                    let dbValue = 0;
-                    if (selectedSource === 'Elektrik') dbValue = Number(myMahalle.elektrik.ortalama);
-                    else if (selectedSource === 'Su') dbValue = Number(myMahalle.su.ortalama);
-                    else if (selectedSource === 'Doğalgaz') dbValue = Number(myMahalle.dogalgaz.ortalama);
+                    let newValue = 0;
+                    if (selectedSource === 'Elektrik') newValue = Number(myMahalle.elektrik.ortalama);
+                    else if (selectedSource === 'Su') newValue = Number(myMahalle.su.ortalama);
+                    else if (selectedSource === 'Doğalgaz') newValue = Number(myMahalle.dogalgaz.ortalama);
 
-                    // --- SİHİRLİ DOKUNUŞ BURADA ---
-                    // Veritabanından gelen gerçek değerin üzerine küçük bir titreşim ekliyoruz.
-                    const liveValue = addJitter(dbValue);
+                    console.log(`📡 Canlı Veri Alındı (${selectedSource}):`, newValue);
 
                     setGraphData(prevData => {
-                        const newData = [...prevData.slice(1), liveValue];
+                        const newData = [...prevData.slice(1), newValue];
                         return newData;
                     });
                     setLastUpdate(new Date());
                 }
             } catch (error) {
-                console.error("Canlı veri alınamadı:", error);
+                console.error("Canlı veri hatası:", error);
             }
         };
 
-        const interval = setInterval(fetchRealTimeData, 15000); // 15 Saniye
+        const interval = setInterval(fetchRealTimeData, 15000); 
         return () => clearInterval(interval);
 
-    }, [selectedSource, initialData.mahalle, addJitter]); 
+    }, [selectedSource, initialData.mahalle]); 
 
 
     const timeLabels = useMemo(() => {
@@ -168,7 +156,7 @@ const MahalleDetayModal = ({ mahalleData: initialData, onClose, onIncidentCreate
               </h2>
               <p className="text-gray-400 text-sm mt-1 flex items-center gap-2">
                 <Activity size={14} className="animate-pulse text-green-400"/> 
-                Canlı Veri Akışı  • Son Veri: {lastUpdate.toLocaleTimeString()}
+                Canlı Veri (15sn) • Son Güncelleme: {lastUpdate.toLocaleTimeString()}
               </p>
             </div>
             
@@ -195,8 +183,8 @@ const MahalleDetayModal = ({ mahalleData: initialData, onClose, onIncidentCreate
                     <h3 className="font-bold text-gray-800 text-xl flex items-center gap-2">
                         <BarChart2 className="text-emerald-600"/> {selectedSource} Tüketim Grafiği
                     </h3>
-                    <span className="px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-full animate-pulse border border-emerald-200">
-                        CANLI (15sn)
+                    <span className="px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-full border border-emerald-200">
+                        GERÇEK ZAMANLI
                     </span>
                 </div>
 
@@ -204,7 +192,7 @@ const MahalleDetayModal = ({ mahalleData: initialData, onClose, onIncidentCreate
                    {graphData.map((val, i) => (
                       <div key={i} className="flex-1 flex flex-col justify-end items-center group h-full relative z-10">
                         <div className="absolute -top-10 bg-gray-900 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
-                            {Math.round(val)}
+                            {Number(val).toFixed(2)}
                         </div>
                         <div 
                             className={`w-full rounded-t-sm transition-all duration-500 ease-in-out ${
@@ -229,6 +217,9 @@ const MahalleDetayModal = ({ mahalleData: initialData, onClose, onIncidentCreate
     );
 };
 
+/* =========================================================================
+   4. ANA SAYFA
+   ========================================================================= */
 const Mahalleler = () => {
     const [mahalleler, setMahalleler] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -238,7 +229,10 @@ const Mahalleler = () => {
     const fetchData = useCallback(async () => {
         try {
             setMahalleler(prev => { if(prev.length === 0) setLoading(true); return prev; });
-            const response = await api.get('/stats/dashboard');
+            
+            // --- DÜZELTME 2: ANA SAYFA KARTLARI DA CANLI VERİ GÖSTERSİN ---
+            const response = await api.get('/incidents/live-dashboard');
+            
             setMahalleler(response.data.data);
         } catch (error) { console.error("Veri çekme hatası:", error); } 
         finally { setLoading(false); }

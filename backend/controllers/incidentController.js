@@ -1,5 +1,5 @@
 const Incident = require('../models/Incident');
-// --- DÜZELTME: BU SATIR EKSİKTİ, O YÜZDEN HATA VERİYORDU ---
+const LiveTuketim = require('../models/LiveTuketim'); // Yeni eklediğimiz model
 const ActiveAlarm = require('../models/ActiveAlarm'); 
 
 // Arıza Listesi
@@ -124,5 +124,40 @@ exports.getSystemAlerts = async (req, res) => {
     } catch (error) {
         console.error("Alarm Çekme Hatası:", error);
         res.status(500).json({ success: false, message: "Alarmlar alınamadı." });
+    }
+};
+
+// =========================================================================
+// YENİ: CANLI VERİ TABLOSUNDAN SON KAYDI ÇEK (tuketim_kayitlari)
+// =========================================================================
+exports.getLiveDashboardData = async (req, res) => {
+    try {
+        // 1. Veritabanındaki tüm mahalle isimlerini bul
+        const neighborhoods = await LiveTuketim.distinct("Mahalle");
+        
+        const liveData = [];
+
+        for (const mahalleIsmi of neighborhoods) {
+            // 2. Her mahalle için EN SON eklenen kaydı (Tarih veya ID'ye göre) çek
+            const latestRecord = await LiveTuketim.findOne({ Mahalle: mahalleIsmi })
+                                                  .sort({ _id: -1 }); // En yeni kayıt en üstte
+
+            if (latestRecord) {
+                // Frontend'in beklediği formata çeviriyoruz
+                // (Frontend 'ortalama' bekliyor, biz ona gerçek 'tuketim' değerini veriyoruz)
+                liveData.push({
+                    mahalle: latestRecord.Mahalle,
+                    elektrik: { ortalama: latestRecord.Elektrik_Tuketim }, 
+                    su: { ortalama: latestRecord.Su_Tuketim },
+                    dogalgaz: { ortalama: latestRecord.Dogalgaz_Tuketim }
+                });
+            }
+        }
+
+        res.status(200).json({ success: true, data: liveData });
+
+    } catch (error) {
+        console.error("Canlı Veri Hatası:", error);
+        res.status(500).json({ success: false, message: "Canlı veriler alınamadı" });
     }
 };
