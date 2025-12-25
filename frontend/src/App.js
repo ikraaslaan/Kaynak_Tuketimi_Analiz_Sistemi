@@ -10,7 +10,6 @@ import SubscriptionBox from "./components/SubscriptionBox";
 import KayitForm from "./pages/KayitForm";
 import AdminLogin from "./pages/AdminLogin";
 
-// --- ARKADAŞININ EKLEDİĞİ YENİ SAYFALAR ---
 import Mahalleler from "./pages/yonetim/Mahalleler";
 import ArizaYonetimi from "./pages/yonetim/ArizaYonetimi";
 import KesintiOlustur from "./pages/yonetim/KesintiOlustur";
@@ -21,7 +20,7 @@ import { AlertTriangle, X } from "lucide-react";
 import AuthContext from "./context/AuthContext";
 
 /* =========================================================================
-   SİSTEM BİLDİRİM ÇUBUĞU (Gölge ve Çizgiler Kaldırıldı - Düz Tasarım)
+   SİSTEM BİLDİRİM ÇUBUĞU (HIZLANDIRILDI)
    ========================================================================= */
 const SystemAlertBar = () => {
   const [alerts, setAlerts] = useState([]);
@@ -43,33 +42,47 @@ const SystemAlertBar = () => {
 
   useEffect(() => {
     checkSystemStatus(); 
-    const interval = setInterval(checkSystemStatus, 10000); 
+    // --- DÜZELTME 1: GÜNCELLEME SIKLIĞI ARTIRILDI ---
+    // Eskiden 10000 (10sn) idi, şimdi 2000 (2sn). 
+    // Python hata bulduğu an ekranda belirecek.
+    const interval = setInterval(checkSystemStatus, 2000); 
     return () => clearInterval(interval);
   }, []);
 
   if (alerts.length === 0 || !visible) return null;
 
   return (
-    // DÜZELTME: 'border-b-4' ve 'shadow-md' silindi. Artık dümdüz ve bütünleşik.
     <div className="bg-red-600 text-white relative overflow-hidden z-[99999]">
       <div className="container mx-auto flex items-center justify-between py-2 px-4">
         <div className="flex items-center gap-2 font-bold shrink-0 bg-red-700 px-3 py-1 rounded-lg z-10">
           <AlertTriangle size={20} className="animate-pulse text-yellow-300" />
           <span>SİSTEM UYARISI ({alerts.length})</span>
         </div>
-        <div className="flex-1 overflow-hidden mx-4 relative h-6">
+        
+        <div className="flex-1 overflow-hidden mx-4 relative h-6 flex items-center">
           <motion.div 
             className="whitespace-nowrap absolute"
-            animate={{ x: ["100%", "-100%"] }} 
-            transition={{ repeat: Infinity, duration: 15, ease: "linear" }}
+            animate={{ x: ["0%", "-100%"] }} 
+            // --- DÜZELTME 2: AKIŞ HIZI ARTIRILDI ---
+            // duration: 60 çok yavaştı, 30 yaptık. Daha seri akacak.
+            transition={{ repeat: Infinity, duration: 30, ease: "linear" }} 
           >
-             {alerts.map((alert, index) => (
-                <span key={index} className="inline-block mr-16 font-medium text-red-100">
-                  <span className="font-bold text-white uppercase">[{alert.Mahalle}]</span> {alert.Kaynak_Tipi} ARIZASI: {alert.Aciklama}
-                </span>
-             ))}
+             {alerts.map((alert, index) => {
+                const mahalle = alert.Mahalle || alert.mahalle || "Bilinmeyen Mahalle";
+                const kaynak = alert.Kaynak || alert.tur || alert.Kaynak_Tipi || "Genel";
+                const mesaj = alert.Mesaj || alert.aciklama || alert.Aciklama || "Arıza detayı yok";
+
+                return (
+                  <span key={index} className="inline-block mr-16 font-medium text-red-100 text-lg">
+                    <span className="font-bold text-white uppercase tracking-wider">⚠️ [{mahalle}]</span> 
+                    <span className="text-yellow-300 font-bold mx-2 uppercase">{kaynak} ARIZASI:</span> 
+                    {mesaj}
+                  </span>
+                );
+             })}
           </motion.div>
         </div>
+
         <button 
           onClick={() => setVisible(false)} 
           className="bg-red-700 hover:bg-red-800 p-1 rounded-full transition-colors z-10"
@@ -126,17 +139,10 @@ function App() {
 
   return (
     <div className="min-h-screen bg-[#DDEEE3] relative flex flex-col">
-      
-      {/* --- DÜZELTME: Tamamen Birleşik Başlık --- */}
-      {/* 'shadow-md' silindi. Artık Navbar sayfanın devamı gibi duracak. */}
       <div className="sticky top-0 left-0 right-0 z-[9999] w-full flex flex-col">
-        
-        {/* Kırmızı Şerit */}
         <div className="relative z-20 w-full">
           <SystemAlertBar />
         </div>
-
-        {/* Navbar */}
         <div className="relative z-10 w-full bg-[#DDEEE3]/90 backdrop-blur-md border-b border-white/20"> 
           <Navbar
             activeTab={activeTab}
@@ -147,7 +153,6 @@ function App() {
         </div>
       </div>
       
-      {/* İçerik Alanı - 'mt-4' silindi, arada boşluk kalmadı */}
       <div className="flex-1 relative z-0"> 
         <AnimatePresence mode="wait">
           {renderContent()}
@@ -159,7 +164,6 @@ function App() {
           <SubscriptionBox /> 
         </div>
       )}
-      
     </div>
   );
 }

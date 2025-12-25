@@ -17,7 +17,7 @@ const {
 // --- ÖZEL ROTALAR (En Üste) ---
 // Sistem önce bu özel adresleri kontrol etsin diye en başa yazıyoruz.
 router.get('/alerts', getSystemAlerts); 
-router.get('/simulate', simulateAutoAlarm); // <--- SİMÜLASYON ROTASI BURADA
+
 
 // --- GENEL ROTALAR ---
 router.get('/', getIncidents);
