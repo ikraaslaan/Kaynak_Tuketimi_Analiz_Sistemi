@@ -1,3 +1,4 @@
+import datetime
 import pandas as pd
 import time
 import numpy as np
@@ -38,8 +39,11 @@ col_tanimlar = db["mahalle_tanimlari"]
 col_kayitlar = db["tuketim_kayitlari"]
 
 # --- BAŞLANGIÇ TEMİZLİĞİ ---
-print("Veritabanındaki eski tüketim kayıtları temizleniyor (Temiz Başlangıç)...")
-col_kayitlar.delete_many({}) 
+col_kayitlar.delete_many({
+    "tarih": {
+        "$gte": datetime(2026, 1, 1)
+    }
+})
 
 # --- 3. MAHALLELERİ YÜKLE ---
 print("Mahalle profilleri hazırlanıyor...")
