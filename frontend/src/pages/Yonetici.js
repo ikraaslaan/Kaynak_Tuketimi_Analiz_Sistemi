@@ -128,7 +128,7 @@ const Yonetici = ({ onLogout }) => {
             <h1 className="text-3xl font-bold text-emerald-900 flex items-center gap-3"><Activity className="text-emerald-600"/> Yönetici Paneli</h1>
             <p className="text-emerald-700 mt-1">Şehir geneli analiz ve arıza yönetimi.</p>
         </div>
-        {onLogout && (<button onClick={onLogout} className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-xl transition shadow-md"><LogOut size={20} />Çıkış Yap</button>)}
+        {/* Çıkış butonu buradan kaldırıldı */}
       </div>
 
       {/* GRAFİK BÖLÜMÜ */}

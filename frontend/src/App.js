@@ -13,6 +13,7 @@ import AdminLogin from "./pages/AdminLogin";
 import Mahalleler from "./pages/yonetim/Mahalleler";
 import ArizaYonetimi from "./pages/yonetim/ArizaYonetimi";
 import KesintiOlustur from "./pages/yonetim/KesintiOlustur";
+import AnalitikModuller from "./pages/yonetim/AnalitikModuller";
 
 import "./App.css";
 import { AnimatePresence, motion } from "framer-motion"; 
@@ -132,6 +133,8 @@ function App() {
         return isAdminAuthed ? <KesintiOlustur key="planli_kesinti" /> : <AdminLogin />;
       case "yonetici":
         return isAdminAuthed ? <Yonetici key="yonetici" onLogout={handleAdminLogout} /> : <AdminLogin />;
+      case "analitik":
+        return isAdminAuthed ? <AnalitikModuller /> : <AdminLogin />;
       default:
         return <HomePage key="home-default" selectedNeighborhood={selectedNeighborhood} setSelectedNeighborhood={setSelectedNeighborhood} />;
     }

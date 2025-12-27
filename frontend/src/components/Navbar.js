@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { Menu, X, Home, Zap, Droplets, Flame, Shield, LogOut, Map, AlertTriangle, CalendarPlus } from "lucide-react";
 import icon from "../images/icon.jpg";
+import { TrendingUp } from "lucide-react";
+
 
 const Navbar = ({ activeTab, setActiveTab, onLogout, isAdminAuthed }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -30,6 +32,7 @@ const Navbar = ({ activeTab, setActiveTab, onLogout, isAdminAuthed }) => {
   const adminMenuItems = [
     { id: "home", label: "Anasayfa", Icon: Home },
     { id: "mahalleler", label: "Mahalleler", Icon: Map },
+    { id: "analitik", label: "Analitik Modüller", Icon: TrendingUp },
     { id: "arizalar", label: "Arıza ve Kesintiler", Icon: AlertTriangle },
     { id: "planli_kesinti", label: "Planlı Kesinti Oluştur", Icon: CalendarPlus },
     { id: "yonetici", label: "Yönetici", Icon: Shield },
