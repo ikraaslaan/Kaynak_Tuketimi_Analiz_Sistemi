@@ -9,7 +9,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 15000, // GÜNCELLENEN KISIM: Süreyi 15 saniyeye çıkardık (Timeout hatasını önlemek için)
+  timeout: 60000, // 60 seconds default for general operations
 });
 
 // Request interceptor - Token ekleme ve URL kontrolü (SENİN KODUN AYNEN KALDI)

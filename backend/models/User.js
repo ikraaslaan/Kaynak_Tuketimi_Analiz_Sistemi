@@ -6,7 +6,6 @@ const UserSchema = new mongoose.Schema({
     required: true,
     unique: true
   },
-  // ✨ YENİ EKLENDİ: Mail atabilmemiz için şart
   email: {
     type: String,
     required: true,
@@ -16,15 +15,20 @@ const UserSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  // ✨ YENİ EKLENDİ: Hangi mahallede olduğunu bilmeliyiz ki kesinti olunca haber verelim
+  // Turkish field name (for user dashboard)
   mahalle: {
     type: String,
-    required: true
+    required: false
+  },
+  // English field name (for compatibility)
+  neighborhood: {
+    type: String,
+    required: false
   },
   role: {
     type: String,
     enum: ['admin', 'kullanici'],
-    default: 'kullanici' // Varsayılan olarak herkes kullanıcı olsun
+    default: 'kullanici'
   },
   createdAt: {
     type: Date,

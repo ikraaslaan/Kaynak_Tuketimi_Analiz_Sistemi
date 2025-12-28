@@ -165,7 +165,13 @@ const Yonetici = ({ onLogout }) => {
               </defs>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="day" hide />
-              <YAxis hide />
+              <YAxis 
+                domain={['dataMin - 100', 'dataMax + 100']} 
+                hide={false}
+                axisLine={false}
+                tickLine={false}
+                tick={{ fontSize: 12, fill: '#6b7280' }}
+              />
               <Tooltip />
               <Area type="monotone" dataKey="value" stroke={chartColors[activeTab].stroke} fill={`url(#color${activeTab})`} strokeWidth={3} />
             </AreaChart>

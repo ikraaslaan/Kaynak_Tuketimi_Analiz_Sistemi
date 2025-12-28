@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, useContext } from "react";
 import { Droplets, Search } from "lucide-react";
 import {
   LineChart,
@@ -10,6 +10,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import api from "../services/api";
+import AuthContext from "../context/AuthContext";
 
 const normalizeTr = (str) =>
   (str || "")
@@ -28,6 +29,7 @@ const normalizeTr = (str) =>
     .replace(/Ç/g, "c");
 
 const Su = ({ selectedNeighborhood }) => {
+  const { user } = useContext(AuthContext);
   const [neighborhoodNames, setNeighborhoodNames] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -51,14 +53,22 @@ const Su = ({ selectedNeighborhood }) => {
         setNeighborhoodNames(names);
         setFiltered(names);
 
-        // --- YENİ EKLENEN KISIM ---
-        // Sayfa yüklendiğinde varsayılan olarak ilk mahalleyi seç
+        // --- FIX: Use logged-in user's neighborhood if available ---
         if (names.length > 0 && !selectedNeighborhoodName) {
-            const defaultName = names.includes("Çaydaçıra") ? "Çaydaçıra" : names[0];
+            // Priority: 1. User's neighborhood, 2. "Çaydaçıra" if exists, 3. First neighborhood
+            let defaultName = names[0];
+            
+            // Check if user has a neighborhood field (could be mahalle, neighborhood, etc.)
+            const userNeighborhood = user?.mahalle || user?.neighborhood || user?.Mahalle;
+            if (userNeighborhood && names.includes(userNeighborhood)) {
+                defaultName = userNeighborhood;
+            } else if (names.includes("Çaydaçıra")) {
+                defaultName = "Çaydaçıra";
+            }
+            
             setSelectedNeighborhoodName(defaultName);
-            setSearchQuery(defaultName); // Arama kutusuna yaz
+            setSearchQuery(defaultName);
         }
-        // --- YENİ EKLENEN KISIM SONU ---
 
       } catch (e) {
         console.error("Mahalle listesi yüklenemedi:", e);
@@ -153,15 +163,28 @@ const Su = ({ selectedNeighborhood }) => {
     };
   }, [statistics]);
 
+  // Helper function to add realistic fluctuations (Moderate variance for Water)
+  const addFluctuations = (baseValue) => {
+    const variance = 0.08; // 8% variance for Water (moderate, smoother)
+    const fluctuation = (Math.random() * variance * 2 - variance) * baseValue;
+    return Math.max(0, baseValue + fluctuation);
+  };
+
   const chartData = useMemo(() => {
     // Backend zaten son 7 gün verisi gönderiyor. Eğer veri çoksa (30'dan fazla) son 30'u alalım.
     const sliced = timeSeriesData.length > 30 ? timeSeriesData.slice(-30) : timeSeriesData;
     
-    return sliced.map((item, index) => ({
-      ...item,
-      // X ekseninde tarih değerini kullanıyoruz
-      tarih: item.tarih || `Gün ${index + 1}`,
-    }));
+    // Etiketleri düzeltelim ve gerçekçi dalgalanmalar ekleyelim
+    return sliced.map((item, index) => {
+      const baseValue = item.value || 0;
+      const fluctuatedValue = baseValue > 0 ? addFluctuations(baseValue) : baseValue;
+      return {
+        ...item,
+        value: fluctuatedValue, // Apply fluctuation
+        // X ekseninde tarih değerini kullanıyoruz
+        tarih: item.tarih || `Gün ${index + 1}`,
+      };
+    });
   }, [timeSeriesData]);
 
   if (loading) {
@@ -290,7 +313,12 @@ const Su = ({ selectedNeighborhood }) => {
                     tick={{ fontSize: 12 }}
                     interval="preserveStartEnd"
                   />
-                  <YAxis stroke="#6b7280" tickMargin={8} tick={{ fontSize: 12 }} />
+                  <YAxis 
+                    domain={['dataMin - 50', 'dataMax + 50']}
+                    stroke="#6b7280" 
+                    tickMargin={8} 
+                    tick={{ fontSize: 12 }} 
+                  />
                   <Tooltip 
                     cursor={{ stroke: chartColors.stroke, strokeWidth: 1 }}
                     contentStyle={{

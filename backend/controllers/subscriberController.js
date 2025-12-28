@@ -20,7 +20,34 @@ exports.subscribe = async (req, res) => {
   }
 };
 
-// 2. Bildirim Gönderme (IncidentController'dan çağrılır)
+// 2. Get Subscriber by Email (for user dashboard)
+exports.getSubscriberByEmail = async (req, res) => {
+  try {
+    const { email } = req.query;
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'E-posta adresi gereklidir.' });
+    }
+
+    const subscriber = await Subscriber.findOne({ email: email.toLowerCase() });
+    if (!subscriber) {
+      return res.status(404).json({ success: false, message: 'Abone bulunamadı.' });
+    }
+
+    res.status(200).json({ 
+      success: true, 
+      data: {
+        email: subscriber.email,
+        neighborhood: subscriber.neighborhood,
+        name: subscriber.name,
+        surname: subscriber.surname
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 3. Bildirim Gönderme (IncidentController'dan çağrılır)
 exports.notifySubscribers = async (incident) => {
   try {
     const subscribers = await Subscriber.find({ neighborhood: incident.Mahalle });

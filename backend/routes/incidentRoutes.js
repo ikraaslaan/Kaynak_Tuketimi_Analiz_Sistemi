@@ -29,6 +29,7 @@ router.get('/live-dashboard', getLiveDashboardData);
 router.get('/', getIncidents);
 router.post('/planned', createPlannedOutage); 
 router.post('/instant', createInstantIncident); 
-router.put('/:id/coz', resolveIncident); 
+router.put('/:id/coz', resolveIncident); // Turkish route
+router.put('/:id/resolve', resolveIncident); // English route alias 
 
 module.exports = router;

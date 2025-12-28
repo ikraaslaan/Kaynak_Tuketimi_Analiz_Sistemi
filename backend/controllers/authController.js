@@ -24,6 +24,7 @@ exports.loginUser = async (req, res) => {
         _id: user.id,
         username: user.username,
         role: user.role,
+        mahalle: user.mahalle, // Include neighborhood for user dashboard
         token: generateToken(user._id) // <--- İşte giriş anahtarı bu!
       });
     } else {

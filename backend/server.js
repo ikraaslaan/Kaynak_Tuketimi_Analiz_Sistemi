@@ -12,6 +12,8 @@ const authRoutes = require('./routes/authRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const subscriberRoutes = require('./routes/subscriberRoutes');
 const subscriberVerificationRoutes = require('./routes/subscriberVerificationRoutes');
+const analyticsRoutes = require('./routes/analyticsRoutes');
+const supportRoutes = require('./routes/supportRoutes');
 
 dotenv.config();
 
@@ -24,7 +26,16 @@ app.use(cors({
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.use(express.json());
+app.use(express.json({ limit: '50mb' })); // PDF upload için daha büyük limit
+
+// Increase timeout for long-running requests (especially PDF generation)
+app.use((req, res, next) => {
+    // Set timeout to 5 minutes for analytics endpoints
+    if (req.path.includes('/analytics/generate-report')) {
+        req.setTimeout(300000); // 5 minutes
+    }
+    next();
+});
 
 // --- 2. ROTALAR ---
 app.use('/api/readings', readingRoutes);
@@ -35,6 +46,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/subscribers', subscriberRoutes);
 app.use('/api/verification/subscriber', subscriberVerificationRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/support', supportRoutes);
 
 // Test Rotası
 app.get('/', (req, res) => res.send('API Calisiyor...'));
@@ -51,6 +64,42 @@ const connectDB = async () => {
     try {
         await mongoose.connect(process.env.MONGO_URI);
         console.log('✅ MongoDB Başarıyla Bağlandı');
+        
+        // Ensure indexes are created for Reading model (tuketim_kayitlari collection)
+        // This prevents memory issues during sorting operations and enables fast queries
+        const Reading = require('./models/Reading');
+        
+        // Create all indexes defined in the schema (background: true for non-blocking)
+        try {
+            await Reading.createIndexes({ background: true });
+            console.log('✅ Reading model indexes ensured (Tarih: -1, Mahalle: 1, Mahalle+Tarih compound)');
+        } catch (idxErr) {
+            if (idxErr.code !== 85) { // 85 = IndexOptionsConflict, index already exists
+                console.log('ℹ️ Indexes may already exist or creation failed:', idxErr.message);
+            } else {
+                console.log('✅ Indexes already exist');
+            }
+        }
+        
+        // Explicitly ensure compound index for performance (CRITICAL for report generation)
+        try {
+            await Reading.collection.createIndex({ Mahalle: 1, Tarih: -1 }, { background: true });
+            console.log('✅ Mahalle + Tarih compound index oluşturuldu');
+        } catch (idxErr) {
+            if (idxErr.code !== 85) {
+                console.log('ℹ️ Mahalle + Tarih index zaten mevcut veya oluşturulamadı:', idxErr.message);
+            }
+        }
+        
+        try {
+            await Reading.collection.createIndex({ Mahalle: 1 }, { background: true });
+            console.log('✅ Mahalle index oluşturuldu');
+        } catch (idxErr) {
+            if (idxErr.code !== 85) {
+                console.log('ℹ️ Mahalle index zaten mevcut veya oluşturulamadı:', idxErr.message);
+            }
+        }
+        
     } catch (err) {
         console.error('❌ MongoDB Hatası:', err.message);
     }

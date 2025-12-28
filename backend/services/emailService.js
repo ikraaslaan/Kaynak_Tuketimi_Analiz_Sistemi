@@ -72,6 +72,52 @@ const sendOutageNotification = async (email, details) => {
     return sendWithTimeout(mailOptions);
 };
 
+// ✨ 3. FONKSİYON: ARIZA BİLDİRİMİ GÖNDER (YENİ EKLENDİ)
+const sendMalfunctionReport = async (reportData) => {
+    console.log(`📧 Arıza bildirimi gönderiliyor: ${reportData.mahalle} - ${reportData.kaynak}`);
+
+    const adminEmail = USER_EMAIL; // Admin email (can be changed to a different address)
+    const reportDate = new Date().toLocaleDateString('tr-TR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+
+    const mailOptions = {
+        from: `"Kentsel Tüketim Analizi" <${USER_EMAIL}>`,
+        to: adminEmail,
+        subject: `🚨 ARIZA BİLDİRİMİ: ${reportData.mahalle} - ${reportData.kaynak}`,
+        html: `
+            <div style="font-family: Arial, sans-serif; padding: 20px; border: 2px solid #dc2626; border-radius: 8px; background-color: #fffafa;">
+                <h2 style="color: #dc2626; margin-bottom: 20px;">🚨 YENİ ARIZA BİLDİRİMİ</h2>
+                
+                <div style="background-color: #fee2e2; padding: 20px; border-radius: 4px; border: 1px solid #fecaca; margin: 20px 0;">
+                    <p style="margin: 8px 0;"><strong>👤 Kullanıcı:</strong> ${reportData.kullaniciAdi || 'Bilinmeyen'}</p>
+                    <p style="margin: 8px 0;"><strong>📍 Mahalle:</strong> ${reportData.mahalle}</p>
+                    <p style="margin: 8px 0;"><strong>⚡ Kaynak Tipi:</strong> ${reportData.kaynak}</p>
+                    <p style="margin: 8px 0;"><strong>📅 Tarih:</strong> ${reportDate}</p>
+                    <p style="margin: 8px 0;"><strong>📊 Mevcut Değer:</strong> ${reportData.mevcutDeger || 'N/A'} ${reportData.birim || ''}</p>
+                </div>
+                
+                <div style="background-color: #fff; padding: 15px; border-radius: 4px; border: 1px solid #fecaca; margin: 20px 0;">
+                    <p style="margin: 0; font-weight: bold; color: #991b1b;">📝 Bildirim Mesajı:</p>
+                    <p style="margin: 10px 0 0 0; color: #374151;">
+                        ${reportData.mesaj || 'Anormal tüketim tespit edildi. Lütfen kontrol ediniz.'}
+                    </p>
+                </div>
+                
+                <p style="font-size: 12px; color: #666; margin-top: 20px;">
+                    Bu bildirim sistem tarafından otomatik olarak oluşturulmuştur.
+                </p>
+            </div>
+        `,
+    };
+
+    return sendWithTimeout(mailOptions);
+};
+
 // YARDIMCI FONKSİYON: Timeout Kontrolü (Senin yazdığın mantık)
 const sendWithTimeout = (mailOptions, timeoutMs = 8000) => {
     return Promise.race([
@@ -96,5 +142,6 @@ const sendWithTimeout = (mailOptions, timeoutMs = 8000) => {
 // İki fonksiyonu da dışarı açıyoruz
 module.exports = {
     sendVerificationCode,
-    sendOutageNotification
+    sendOutageNotification,
+    sendMalfunctionReport
 };

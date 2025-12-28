@@ -64,14 +64,29 @@ const MahalleDetayModal = ({ mahalleData: initialData, onClose, onIncidentCreate
     const [lastUpdate, setLastUpdate] = useState(new Date()); 
     const [currentValues, setCurrentValues] = useState(initialData); 
 
-    // --- 1. BAŞLANGIÇ: ELİMİZDEKİ TEK VERİYİ 24 KERE YAZIYORUZ ---
+    // Helper function to add realistic fluctuations
+    const addFluctuations = (baseValue, source) => {
+        // Variance percentages based on resource type
+        const variances = {
+            'Elektrik': 0.15,  // High variance (15%) - jaggy, dynamic
+            'Su': 0.08,        // Moderate variance (8%) - smoother
+            'Doğalgaz': 0.05   // Low variance (5%) - very smooth
+        };
+        
+        const variance = variances[source] || 0.1;
+        const fluctuation = (Math.random() * variance * 2 - variance) * baseValue; // -variance to +variance
+        return Math.max(0, baseValue + fluctuation); // Ensure non-negative
+    };
+
+    // --- 1. BAŞLANGIÇ: ELİMİZDEKİ TEK VERİYİ 24 KERE YAZIYORUZ (WITH FLUCTUATIONS) ---
     useEffect(() => {
         let baseValue = 0;
         if (selectedSource === 'Elektrik') baseValue = Number(initialData.elektrik.ortalama);
         else if (selectedSource === 'Su') baseValue = Number(initialData.su.ortalama);
         else if (selectedSource === 'Doğalgaz') baseValue = Number(initialData.dogalgaz.ortalama);
 
-        const initialGraph = Array.from({ length: 24 }, () => baseValue);
+        // Create initial graph with realistic fluctuations
+        const initialGraph = Array.from({ length: 24 }, () => addFluctuations(baseValue, selectedSource));
         setGraphData(initialGraph);
         setCurrentValues(initialData);
     }, [selectedSource, initialData]);
@@ -89,10 +104,13 @@ const MahalleDetayModal = ({ mahalleData: initialData, onClose, onIncidentCreate
                 if (myMahalle) {
                     setCurrentValues(myMahalle);
 
-                    let newValue = 0;
-                    if (selectedSource === 'Elektrik') newValue = Number(myMahalle.elektrik.ortalama);
-                    else if (selectedSource === 'Su') newValue = Number(myMahalle.su.ortalama);
-                    else if (selectedSource === 'Doğalgaz') newValue = Number(myMahalle.dogalgaz.ortalama);
+                    let baseValue = 0;
+                    if (selectedSource === 'Elektrik') baseValue = Number(myMahalle.elektrik.ortalama);
+                    else if (selectedSource === 'Su') baseValue = Number(myMahalle.su.ortalama);
+                    else if (selectedSource === 'Doğalgaz') baseValue = Number(myMahalle.dogalgaz.ortalama);
+
+                    // Add realistic fluctuation to the new value
+                    const newValue = addFluctuations(baseValue, selectedSource);
 
                     console.log(`📡 Canlı Veri Alındı (${selectedSource}):`, newValue);
 
@@ -129,17 +147,62 @@ const MahalleDetayModal = ({ mahalleData: initialData, onClose, onIncidentCreate
       if(!window.confirm(`${currentValues.mahalle} için ${selectedSource} arıza kaydı oluşturulsun mu?`)) return;
       setLoading(true);
       try {
+          // 1. Create incident record in database
           const newIncident = {
               Mahalle: currentValues.mahalle,
               Kaynak_Tipi: selectedSource,
               Aciklama: `${currentValues.mahalle} mahallesinde ${selectedSource} arızası (Grafik ekranından manuel)`,
           };
           await api.post('/incidents/instant', newIncident); 
-          alert(`Kaydedildi!`);
+          
+          // 2. Send email notification to admin
+          const currentValue = selectedSource === 'Elektrik' 
+              ? currentValues.elektrik.ortalama 
+              : selectedSource === 'Su' 
+              ? currentValues.su.ortalama 
+              : currentValues.dogalgaz.ortalama;
+          
+          const unit = selectedSource === 'Elektrik' ? 'kWh' : 'm³';
+          
+          const reportData = {
+              mahalle: currentValues.mahalle,
+              kaynak: selectedSource,
+              kullaniciAdi: 'Sistem Yöneticisi',
+              mevcutDeger: currentValue,
+              birim: unit,
+              mesaj: `Anormal tüketim tespit edildi. Mevcut değer: ${currentValue} ${unit}`
+          };
+          
+          await api.post('/support/report', reportData);
+          
+          // 3. Notify all users in the neighborhood
+          try {
+              const notifyResponse = await api.post('/notifications/notify-neighborhood', {
+                  mahalle: currentValues.mahalle,
+                  kaynak: selectedSource,
+                  mesaj: `${currentValues.mahalle} mahallesinde ${selectedSource} arızası bildirilmiştir. Ekiplerimiz haberdardır.`
+              });
+              
+              if (notifyResponse.data.success) {
+                  const notifiedCount = notifyResponse.data.notifiedCount || 0;
+                  if (notifiedCount > 0) {
+                      alert(`✅ Arıza kaydı oluşturuldu!\n📧 ${currentValues.mahalle} mahallesindeki ${notifiedCount} kullanıcıya bilgilendirme e-postası gönderildi.`);
+                  } else {
+                      alert(`✅ Arıza kaydı oluşturuldu!\nℹ️ ${currentValues.mahalle} mahallesinde kayıtlı kullanıcı bulunamadı.`);
+                  }
+              } else {
+                  alert(`✅ Arıza kaydı oluşturuldu!\n⚠️ Kullanıcı bildirimleri gönderilemedi: ${notifyResponse.data.message}`);
+              }
+          } catch (notifyError) {
+              console.error("Kullanıcı bildirimi hatası:", notifyError);
+              // Don't fail the whole operation if notification fails
+              alert(`✅ Arıza kaydı oluşturuldu!\n⚠️ Kullanıcı bildirimleri gönderilemedi: ${notifyError.response?.data?.message || notifyError.message}`);
+          }
+          
           onIncidentCreated(); 
       } catch (error) {
           console.error("Hata:", error);
-          alert("Arıza kaydedilemedi.");
+          alert("Arıza kaydedilemedi veya e-posta gönderilemedi: " + (error.response?.data?.message || error.message));
       } finally {
           setLoading(false);
       }

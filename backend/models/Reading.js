@@ -11,4 +11,15 @@ const ReadingSchema = new mongoose.Schema({
   timestamps: false // Senin hazır verinde createdAt/updatedAt yoksa bunu false yapalım hata vermesin
 });
 
+// Indexes for performance optimization
+// Single index on Tarih for sorting operations (descending for recent data first)
+ReadingSchema.index({ Tarih: -1 });
+
+// Compound index for queries that filter by Mahalle and sort by Tarih (descending)
+// This is CRITICAL for report generation performance - filters by neighborhood first, then sorts by date
+ReadingSchema.index({ Mahalle: 1, Tarih: -1 });
+
+// Index on Mahalle for aggregation queries
+ReadingSchema.index({ Mahalle: 1 });
+
 module.exports = mongoose.model('Reading', ReadingSchema);

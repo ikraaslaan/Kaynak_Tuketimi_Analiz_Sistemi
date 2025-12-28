@@ -3,7 +3,7 @@ const router = express.Router();
 
 // Controller dosyasını çağırıyoruz
 // DİKKAT: Süslü parantez içindeki isim Controller'dakiyle BİREBİR AYNI olmalı.
-const { getDashboardStats } = require('../controllers/statsController');
+const { getDashboardStats, getTimeSeries } = require('../controllers/statsController');
 
 // Kontrol: Eğer fonksiyon undefined gelirse hata fırlatmadan önce uyaralım (Debug için)
 if (!getDashboardStats) {
@@ -13,5 +13,8 @@ if (!getDashboardStats) {
 
 // GET /api/stats/dashboard
 router.get('/dashboard', getDashboardStats);
+
+// GET /api/stats/timeseries
+router.get('/timeseries', getTimeSeries);
 
 module.exports = router;

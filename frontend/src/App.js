@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext } from "react"; // ✅ Burası kalacak
 import api from "./services/api"; 
 import Navbar from "./components/Navbar";
 import HomePage from "./pages/HomePage";
@@ -19,13 +19,16 @@ import "./App.css";
 import { AnimatePresence, motion } from "framer-motion"; 
 import { AlertTriangle, X } from "lucide-react"; 
 import AuthContext from "./context/AuthContext";
-
 /* =========================================================================
-   SİSTEM BİLDİRİM ÇUBUĞU (HIZLANDIRILDI)
+   SİSTEM BİLDİRİM ÇUBUĞU (HIZLANDIRILDI) - ADMIN ONLY
    ========================================================================= */
 const SystemAlertBar = () => {
+  const { user } = useContext(AuthContext);
   const [alerts, setAlerts] = useState([]);
   const [visible, setVisible] = useState(true);
+
+  // Only show for admins
+  const isAdmin = user && user.role === 'admin';
 
   const checkSystemStatus = async () => {
     try {
@@ -42,15 +45,19 @@ const SystemAlertBar = () => {
   };
 
   useEffect(() => {
+    // Only check system status if user is admin
+    if (!isAdmin) return;
+    
     checkSystemStatus(); 
     // --- DÜZELTME 1: GÜNCELLEME SIKLIĞI ARTIRILDI ---
     // Eskiden 10000 (10sn) idi, şimdi 2000 (2sn). 
     // Python hata bulduğu an ekranda belirecek.
     const interval = setInterval(checkSystemStatus, 2000); 
     return () => clearInterval(interval);
-  }, []);
+  }, [isAdmin]);
 
-  if (alerts.length === 0 || !visible) return null;
+  // Hide for non-admin users
+  if (!isAdmin || alerts.length === 0 || !visible) return null;
 
   return (
     <div className="bg-red-600 text-white relative overflow-hidden z-[99999]">
@@ -144,7 +151,7 @@ function App() {
     <div className="min-h-screen bg-[#DDEEE3] relative flex flex-col">
       <div className="sticky top-0 left-0 right-0 z-[9999] w-full flex flex-col">
         <div className="relative z-20 w-full">
-          <SystemAlertBar />
+          <SystemAlertBar /> {/* Only visible to admins */}
         </div>
         <div className="relative z-10 w-full bg-[#DDEEE3]/90 backdrop-blur-md border-b border-white/20"> 
           <Navbar
