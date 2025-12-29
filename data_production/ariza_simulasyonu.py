@@ -73,7 +73,7 @@ def ariza_uygula(mahalle_adi, veri_paketi, db_aktif_bakimlar, db):
     # ---------------------------------------------------------
     if random.random() < 0.01: # %1 İhtimal
         
-        zar = random.choice(["Elektrik", "Su", "Dogalgaz"])
+        zar = random.choice(["Elektrik", "Su", "Doğalgaz"])
         
         # 1. Hafızaya kaydet
         SIMULASYON_HAFIZASI[mahalle_adi] = zar
